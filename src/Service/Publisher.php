@@ -93,7 +93,7 @@ final class Publisher
 
         $gameDir = $this->findGameDir($repo, $sha, $project->getGameDir());
         if ($gameDir === null) {
-            return $this->fail($project, $sha, ['no game in the repository: games/<id>/config/game.yaml is missing']);
+            return $this->fail($project, $sha, ['no game in the repository: games/<id>/config/game.yaml (or config/game.yaml at the root) is missing']);
         }
         $project->setGameDir($gameDir);
 
@@ -157,9 +157,11 @@ final class Publisher
     }
 
     /** games/<id> of the project, or the only game of the repository. */
+    /** The game's folder in the repository: games/<id>, or "." when the repository is the game folder itself. */
     private function findGameDir(string $repo, string $sha, string $wanted): ?string
     {
-        if ($this->shell->tryRun(['git', 'cat-file', '-e', "$sha:$wanted/config/game.yaml"], $repo) !== null) {
+        $has = fn (string $dir) => $this->shell->tryRun(['git', 'cat-file', '-e', $sha . ':' . ($dir === '.' ? '' : "$dir/") . 'config/game.yaml'], $repo) !== null;
+        if ($has($wanted)) {
             return $wanted;
         }
         $found = [];
@@ -168,7 +170,10 @@ final class Publisher
                 $found[] = $dir;
             }
         }
-        return count($found) === 1 ? $found[0] : null;
+        if (count($found) === 1) {
+            return $found[0];
+        }
+        return !$found && $has('.') ? '.' : null;
     }
 
     /**
@@ -180,10 +185,15 @@ final class Publisher
     {
         $errors = $warnings = [];
         $this->shell->run(['git', 'archive', '--format=tar', '-o', "$work/game.tar", $sha, '--', $gameDir], $repo);
-        $this->shell->run(['tar', '-xf', 'game.tar', '--no-same-owner', '--no-same-permissions'], $work);
+        if ($gameDir === '.') {
+            (new Filesystem())->mkdir("$work/game");
+            $this->shell->run(['tar', '-xf', '../game.tar', '--no-same-owner', '--no-same-permissions'], "$work/game");
+        } else {
+            $this->shell->run(['tar', '-xf', 'game.tar', '--no-same-owner', '--no-same-permissions'], $work);
+            (new Filesystem())->rename("$work/$gameDir", "$work/game");
+            (new Filesystem())->remove("$work/" . explode('/', $gameDir)[0]);
+        }
         unlink("$work/game.tar");
-        (new Filesystem())->rename("$work/$gameDir", "$work/game");
-        (new Filesystem())->remove("$work/" . explode('/', $gameDir)[0]);
 
         $root = "$work/game";
         $files = [];
@@ -230,7 +240,8 @@ final class Publisher
             $errors[] = 'config/game.yaml: ' . $e->getMessage();
         }
         $info = array_intersect_key($config, self::GAME_DEFAULTS) + self::GAME_DEFAULTS;
-        $info['id'] = basename($gameDir);
+        $info['id'] = $gameDir !== '.' ? basename($gameDir)
+            : (is_string($config['id'] ?? null) && preg_match('/^[a-z0-9-]+$/', $config['id']) ? $config['id'] : 'game');
         $info['width'] = max(16, min(4096, (int)$info['width']));
         $info['height'] = max(16, min(4096, (int)$info['height']));
         foreach (['title', 'description', 'lang', 'version'] as $key) {

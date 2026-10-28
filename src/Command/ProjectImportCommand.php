@@ -37,7 +37,7 @@ final class ProjectImportCommand extends Command
         $this->addArgument('repository', InputArgument::REQUIRED, 'owner/name')
             ->addArgument('slug', InputArgument::REQUIRED)
             ->addArgument('category', InputArgument::REQUIRED, 'category slug')
-            ->addOption('game-dir', null, InputOption::VALUE_REQUIRED, 'the game folder (default: games/<slug>, or the only game)')
+            ->addOption('game-dir', null, InputOption::VALUE_REQUIRED, 'the game folder (default: games/<slug>, the only game in games/, or the repository itself)')
             ->addOption('title', null, InputOption::VALUE_REQUIRED)
             ->addOption('description', null, InputOption::VALUE_REQUIRED);
     }

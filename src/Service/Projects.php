@@ -131,7 +131,7 @@ final class Projects
         }
         $files = [];
         foreach ($drafts as $path => $draft) {
-            $files[$project->getGameDir() . '/' . $path] = $draft->isDeleted() ? null : (string)$draft->getContent();
+            $files[$project->inRepo($path)] = $draft->isDeleted() ? null : (string)$draft->getContent();
         }
         $message = trim($message) ?: 'Changes from the JumPHP playground editor';
         try {

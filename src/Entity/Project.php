@@ -123,6 +123,11 @@ class Project
     public function setBrief(string $brief): void { $this->brief = $brief; $this->touch(); }
     public function getCategory(): Category { return $this->category; }
     public function setCategory(Category $category): void { $this->category = $category; $this->touch(); }
+    /** A path of the game as a path in its repository (the game folder is "." when the repository is the game). */
+    public function inRepo(string $path = ''): string
+    {
+        return ltrim(($this->gameDir === '.' ? '' : $this->gameDir) . ($path !== '' ? "/$path" : ''), '/');
+    }
     public function getRepoFullName(): string { return $this->repoFullName; }
     public function setRepoFullName(string $name): void { $this->repoFullName = $name; }
     public function getRepoUrl(): string { return 'https://github.com/' . $this->repoFullName; }

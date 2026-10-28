@@ -7,7 +7,6 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 /**
  * Keeps the two origins apart: on the games origin only the play_* routes answer (no page of the portal, so no
@@ -15,7 +14,7 @@ use Symfony\Component\HttpKernel\Profiler\Profiler;
  */
 final class OriginGuard implements EventSubscriberInterface
 {
-    public function __construct(private string $playHost, private string $appUrl, private ?Profiler $profiler = null)
+    public function __construct(private string $playHost, private string $appUrl)
     {
     }
 
@@ -23,7 +22,7 @@ final class OriginGuard implements EventSubscriberInterface
     {
         return [
             KernelEvents::REQUEST => ['onRequest', 31],    // just after the router
-            KernelEvents::RESPONSE => 'onResponse',
+            KernelEvents::RESPONSE => [['onResponse', 0], ['noToolbar', -110]],    // after the profiler, before its toolbar
         ];
     }
 
@@ -39,8 +38,6 @@ final class OriginGuard implements EventSubscriberInterface
         if (!$event->isMainRequest() || !$this->isPlay($request->getHost())) {
             return;
         }
-        // dev: no debug toolbar injected into the games' pages
-        $this->profiler?->disable();
         if ($route !== '' && !str_starts_with($route, 'play_')) {
             throw new NotFoundHttpException();
         }
@@ -60,6 +57,15 @@ final class OriginGuard implements EventSubscriberInterface
         }
         if (!$headers->has('Content-Security-Policy')) {
             $headers->set('Content-Security-Policy', "frame-ancestors 'self'");
+        }
+    }
+
+    /** dev: no debug toolbar injected into the games' pages */
+    public function noToolbar(ResponseEvent $event): void
+    {
+        if ($this->isPlay($event->getRequest()->getHost())) {
+            $event->getResponse()->headers->remove('X-Debug-Token');
+            $event->getResponse()->headers->remove('X-Debug-Token-Link');
         }
     }
 }

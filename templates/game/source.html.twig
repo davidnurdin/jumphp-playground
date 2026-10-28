@@ -8,7 +8,7 @@
 		<a href="{{ path('game_source', {slug: project.slug}) }}">{{ project.gameDir }}</a>
 		{% set acc = '' %}
 		{% for part in crumbs %}{% set acc = acc ~ (acc ? '/') ~ part %} / {% if loop.last %}{{ part }}{% else %}<a href="{{ path('game_source', {slug: project.slug, path: acc}) }}">{{ part }}</a>{% endif %}{% endfor %}
-		<span class="faint">· commit <a href="{{ project.repoUrl }}/tree/{{ project.publishedSha }}/{{ project.gameDir }}{{ path ? '/' ~ path }}">{{ project.publishedSha|slice(0, 7) }}</a></span>
+		<span class="faint">· commit <a href="{{ project.repoUrl }}/tree/{{ project.publishedSha }}/{{ project.inRepo(path) }}">{{ project.publishedSha|slice(0, 7) }}</a></span>
 	</div>
 	{% if file %}
 		<div class="actions" style="margin-bottom: 12px">
