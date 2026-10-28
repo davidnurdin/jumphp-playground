@@ -46,6 +46,46 @@ final class Thumbnailer
         return imagepng($frame, $out, 9);
     }
 
+    /**
+     * A square icon of the game (an installed app): its own icon (pixel art by whole factors), else the middle
+     * of its picture, else its initial on a colour.
+     */
+    public function icon(string $gameIcon, ?string $thumbnail, int $size, string $out, string $title = '?'): bool
+    {
+        $frame = imagecreatetruecolor($size, $size);
+        imagefill($frame, 0, 0, imagecolorallocate($frame, 11, 14, 31));
+        if (is_file($gameIcon) && ($image = $this->load($gameIcon))) {
+            $w = imagesx($image);
+            $h = imagesy($image);
+            $scale = $size / max($w, $h);
+            $scale = $scale >= 1 ? floor($scale) : $scale;
+            $dw = (int)round($w * $scale);
+            $dh = (int)round($h * $scale);
+            imagealphablending($frame, true);
+            ($scale >= 1 ? 'imagecopyresized' : 'imagecopyresampled')($frame, $image, intdiv($size - $dw, 2), intdiv($size - $dh, 2), 0, 0, $dw, $dh, $w, $h);
+        } elseif ($thumbnail && ($image = $this->load($thumbnail))) {
+            $side = min(imagesx($image), imagesy($image));
+            imagecopyresampled($frame, $image, 0, 0, intdiv(imagesx($image) - $side, 2), intdiv(imagesy($image) - $side, 2), $size, $size, $side, $side);
+        } else {
+            // its initial, big, on a colour of its own
+            [$r, $g, $b] = self::hue(crc32($title) % 360);
+            imagefill($frame, 0, 0, imagecolorallocate($frame, $r, $g, $b));
+            $letter = imagecreatetruecolor(9, 15);
+            imagefill($letter, 0, 0, imagecolorallocate($letter, $r, $g, $b));
+            imagestring($letter, 5, 0, 0, strtoupper(mb_substr(trim($title), 0, 1) ?: '?'), imagecolorallocate($letter, 255, 255, 255));
+            $scale = intdiv($size * 2, 3 * 15);
+            imagecopyresized($frame, $letter, intdiv($size - 9 * $scale, 2), intdiv($size - 15 * $scale, 2), 0, 0, 9 * $scale, 15 * $scale, 9, 15);
+        }
+        return imagepng($frame, $out, 9);
+    }
+
+    /** @return int[] a dark, saturated colour of this hue (0-359) */
+    private static function hue(int $h): array
+    {
+        $f = fn (int $n) => (int)round(255 * (0.42 - 0.3 * max(-1, min(($k = fmod($n + $h / 30, 12)) - 3, 9 - $k, 1))));
+        return [$f(0), $f(8), $f(4)];
+    }
+
     /** How many colours a picture has, roughly (on a small copy): a screen of one colour is not worth showing. */
     public function colours(string $file): int
     {

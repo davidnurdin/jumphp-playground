@@ -69,6 +69,15 @@ final class PlaygroundTest extends WebTestCase
         self::assertSelectorTextContains('h1', 'Test Game');
         $this->get(self::APP, '/test-game/source/src/Scene/PlayScene.php');
         self::assertResponseIsSuccessful();
+        // installable as an app of its own
+        $this->get(self::APP, '/test-game/manifest.webmanifest');
+        $manifest = json_decode((string)$this->client->getResponse()->getContent(), true);
+        self::assertSame(['/test-game', '/test-game/jouer?app=1', 'Test Game'], [$manifest['scope'], $manifest['start_url'], $manifest['short_name']]);
+        $this->get(self::APP, $manifest['icons'][1]['src']);
+        self::assertResponseHeaderSame('Content-Type', 'image/png');
+        self::assertSame([512, 512], array_slice(getimagesizefromstring((string)$this->client->getInternalResponse()->getContent()) ?: [], 0, 2));
+        $this->get(self::APP, '/test-game/sw.js');
+        self::assertResponseHeaderSame('Service-Worker-Allowed', '/test-game');
         $this->get(self::APP, '/nope-nope');
         self::assertResponseStatusCodeSame(404);
     }

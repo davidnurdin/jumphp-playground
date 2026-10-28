@@ -234,3 +234,14 @@ dialog::backdrop { background: rgba(5, 6, 15, .7); }
 .share-menu[hidden] { display: none; }
 .share-menu a, .share-menu button { padding: 8px 12px; border-radius: 6px; color: var(--ink); font: inherit; font-size: 14px; text-align: left; background: none; border: 0; cursor: pointer; }
 .share-menu a:hover, .share-menu button:hover { background: var(--bg-2); text-decoration: none; }
+
+/* --- a game installed as an app: only the game --------------------------------------------------------- */
+.install { position: relative; display: inline-flex; }
+.install[hidden] { display: none; }
+.install > button { display: inline-flex; align-items: center; gap: 6px; }
+.install-help { width: 260px; }
+.install-help p { margin: 6px 8px; font-size: 14px; line-height: 1.5; }
+@media (display-mode: standalone), (display-mode: fullscreen) {
+	body.full .stripe, body.full header.top, body.full .gamebar { display: none; }
+	body.full .frame { height: 100vh; height: 100dvh; }
+}

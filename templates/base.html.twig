@@ -18,6 +18,7 @@
 	<meta property="og:image" content="{% block og_image %}{{ app_url|trim('/', 'right') }}/og.png{% endblock %}">
 	<meta name="twitter:card" content="summary_large_image">
 	{% block head %}{% endblock %}
+	{% block pwa %}{% endblock %}
 	{% block javascripts %}{{ importmap('app') }}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">

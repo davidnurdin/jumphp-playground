@@ -5,6 +5,7 @@
 {% block og_type %}video.game{% endblock %}
 {% block og_image %}{% if site and site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ site.image }}{% elseif project.hasThumbnail %}{{ url('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
 {% block head %}{% if project.publishedSha %}{% include 'game/_jsonld.html.twig' %}{% endif %}{% if not project.listed %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
+{% block pwa %}{% include 'game/_pwa_head.html.twig' %}{% endblock %}
 {% block body_class %}{{ frame ? 'full' }}{% endblock %}
 {% block body %}
 {% if not project.publishedSha %}

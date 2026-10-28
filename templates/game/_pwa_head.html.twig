@@ -1,0 +1,9 @@
+{# the game as an app of its own (PwaController) #}
+{% if project.publishedSha %}
+	<link rel="manifest" href="{{ path('game_manifest', {slug: project.slug}) }}">
+	<link rel="apple-touch-icon" href="{{ path('game_icon', {slug: project.slug, sha: project.publishedSha|slice(0, 12), size: 180}) }}">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="{{ project.title|slice(0, 12) }}">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+{% endif %}

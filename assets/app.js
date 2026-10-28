@@ -82,3 +82,29 @@ for (const box of document.querySelectorAll('[data-share]')) {
 	document.addEventListener('click', (event) => { if (!box.contains(event.target)) close(); });
 	document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
 }
+
+// install a game as an app (templates/game/_install.html.twig, PwaController): Chrome / Edge / Android show their
+// prompt; Safari on iOS has none, so the button says how; nothing once installed (the app runs standalone)
+const install = document.querySelector('[data-install]');
+const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone;
+if (install && !standalone && 'serviceWorker' in navigator) {
+	navigator.serviceWorker.register(install.dataset.install, { scope: install.dataset.scope }).catch(() => {});
+	const button = install.querySelector('button');
+	const help = install.querySelector('.install-help');
+	let prompt = null;
+	addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); prompt = event; install.hidden = false; });
+	addEventListener('appinstalled', () => { install.hidden = true; });
+	if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) install.hidden = false;
+	button.addEventListener('click', async (event) => {
+		event.stopPropagation();
+		if (prompt) {
+			prompt.prompt();
+			const choice = await prompt.userChoice.catch(() => null);
+			if (choice?.outcome === 'accepted') install.hidden = true;
+			prompt = null;
+			return;
+		}
+		help.hidden = !help.hidden;
+	});
+	document.addEventListener('click', (event) => { if (!install.contains(event.target)) help.hidden = true; });
+}
