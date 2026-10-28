@@ -4,6 +4,9 @@ framework:
         cookie_secure: auto
         cookie_samesite: lax
         name: jumphp_session
+        # on the storage volume: the sessions outlive a redeploy
+        handler_id: session.handler.native_file
+        save_path: '%app.storage_dir%/sessions'
     csrf_protection: true
     http_client:
         scoped_clients:
