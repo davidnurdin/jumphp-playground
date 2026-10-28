@@ -58,3 +58,27 @@ for (const box of document.querySelectorAll('[data-rate]')) {
 		box.title = 'Merci ! Votre note : ' + score + ' / 5';
 	});
 }
+
+// share a game (templates/game/_share.html.twig): on a phone its share sheet, on a computer a menu of networks
+for (const box of document.querySelectorAll('[data-share]')) {
+	const button = box.querySelector('button');
+	const menu = box.querySelector('.share-menu');
+	const close = () => { menu.hidden = true; button.setAttribute('aria-expanded', 'false'); };
+	button.addEventListener('click', async (event) => {
+		event.stopPropagation();
+		const data = { title: box.dataset.title, text: box.dataset.text, url: box.dataset.url };
+		if (matchMedia('(pointer: coarse)').matches && navigator.share) {
+			try { await navigator.share(data); return; } catch (e) { if (e.name === 'AbortError') return; }
+		}
+		menu.hidden = !menu.hidden;
+		button.setAttribute('aria-expanded', String(!menu.hidden));
+	});
+	box.querySelector('[data-share-copy]').addEventListener('click', async (event) => {
+		await navigator.clipboard?.writeText(box.dataset.url).catch(() => {});
+		event.target.textContent = 'Lien copié !';
+		setTimeout(() => { event.target.textContent = 'Copier le lien'; close(); }, 1200);
+	});
+	menu.addEventListener('click', (event) => { if (event.target.closest('a')) close(); });
+	document.addEventListener('click', (event) => { if (!box.contains(event.target)) close(); });
+	document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+}

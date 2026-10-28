@@ -7,6 +7,7 @@
 		<div class="actions">
 			{% if mode != 'play' %}<a class="btn small primary" href="{{ path('game_play', {slug: project.slug}) }}">▶ Jouer</a>{% endif %}
 			{% if mode == 'play' %}<button class="btn small" type="button" data-fullscreen>⛶ Plein écran</button>{% endif %}
+			{% include 'game/_share.html.twig' %}
 			<a class="btn small" href="{{ path('game_source', {slug: project.slug}) }}">Sources</a>
 			<a class="btn small" href="{{ path('game_edit', {slug: project.slug}) }}">Éditer</a>
 			<a class="btn small" href="{{ project.repoUrl }}" rel="noopener">GitHub</a>

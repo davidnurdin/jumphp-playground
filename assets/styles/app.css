@@ -225,3 +225,12 @@ dialog::backdrop { background: rgba(5, 6, 15, .7); }
 .rate .stars button.on { color: var(--yellow); }
 .rate .avg { color: var(--ink); font-weight: 700; font-size: 14px; }
 .rate .avg small { color: var(--muted); font-weight: 400; }
+
+/* --- sharing a game --------------------------------------------------------------------------------- */
+.share { position: relative; display: inline-flex; }
+.share > button { display: inline-flex; align-items: center; gap: 6px; }
+.share-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 190px; display: flex; flex-direction: column;
+	background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 12px 30px #0009; }
+.share-menu[hidden] { display: none; }
+.share-menu a, .share-menu button { padding: 8px 12px; border-radius: 6px; color: var(--ink); font: inherit; font-size: 14px; text-align: left; background: none; border: 0; cursor: pointer; }
+.share-menu a:hover, .share-menu button:hover { background: var(--bg-2); text-decoration: none; }

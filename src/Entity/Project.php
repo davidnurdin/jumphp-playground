@@ -165,6 +165,7 @@ class Project
     public function getSite(): ?array { return $this->site; }
     public function hasSite(): bool { return $this->site !== null; }
     public function hasThumbnail(): bool { return $this->hasThumbnail; }
+    public function setHasThumbnail(bool $has): void { $this->hasThumbnail = $has; }
 
     /** After a sync: what is online now. */
     public function publish(string $sha, string $engineVersion, array $gameInfo, ?array $site, bool $hasThumbnail): void

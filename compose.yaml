@@ -8,7 +8,7 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes: [".:/app"]
     environment:
-      SERVER_NAMES: ":80"
+      SERVER_NAMES: ":80, :8000"    # :8000 too: the shooter (same network) opens the games at their real address
       CADDY_GLOBAL_OPTIONS: "auto_https off"
       HOME: /tmp
       XDG_CONFIG_HOME: /tmp/caddy
@@ -25,6 +25,29 @@ services:
     env_file: [{ path: .env.local, required: false }]
     restart: unless-stopped
     depends_on: [db, app]
+  # the screenshots of games without a picture: their own worker (one game at a time) and headless Chrome,
+  # in the app's network so that http://play.jumphp.localhost:8000 reaches it
+  worker-shots:
+    image: jumphp-playground:dev
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes: [".:/app"]
+    environment:
+      HOME: /tmp
+    command: ["php", "bin/console", "messenger:consume", "shots", "--time-limit=3600", "-vv"]
+    env_file: [{ path: .env.local, required: false }]
+    restart: unless-stopped
+    depends_on: [db, app]
+  shooter:
+    image: ghcr.io/puppeteer/puppeteer:24.10.0
+    network_mode: "service:app"
+    init: true
+    volumes: ["./shooter:/shooter:ro"]
+    environment:
+      NODE_PATH: /home/pptruser/node_modules
+      SHOOTER_ALLOW: http://play.jumphp.localhost:8000/
+    command: ["node", "/shooter/server.cjs"]
+    restart: unless-stopped
+    depends_on: [app]
   db:
     image: mariadb:11.4
     environment:

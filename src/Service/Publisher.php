@@ -3,9 +3,11 @@
 namespace App\Service;
 
 use App\Entity\Project;
+use App\Message\ShootProject;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -35,6 +37,7 @@ final class Publisher
         private Thumbnailer $thumbnailer,
         private EntityManagerInterface $em,
         private LockFactory $locks,
+        private MessageBusInterface $bus,
     ) {
     }
 
@@ -142,6 +145,11 @@ final class Publisher
             }
             $this->em->flush();
             $this->prune($project);
+            if (!$thumb) {
+                // no picture of its own: the game photographed in a browser (the "shots" queue, one at a time)
+                $this->bus->dispatch(new ShootProject($project->getId()));
+                $warnings[count($warnings) - 1] .= ' (meanwhile, a screenshot of the game is being made)';
+            }
             return new SyncResult(SyncResult::PUBLISHED, $sha, [], $warnings, count($manifest['files']));
         } finally {
             $fs->remove($work);

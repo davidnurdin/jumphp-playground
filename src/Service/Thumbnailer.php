@@ -28,6 +28,42 @@ final class Thumbnailer
         return false;
     }
 
+    /** A screenshot of the game (any size): whole, centred on the frame, never cropped. */
+    public function fromScreen(string $file, string $out): bool
+    {
+        $image = $this->load($file);
+        if (!$image) {
+            return false;
+        }
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $scale = min(self::WIDTH / $w, self::HEIGHT / $h);
+        $frame = imagecreatetruecolor(self::WIDTH, self::HEIGHT);
+        imagefill($frame, 0, 0, imagecolorallocate($frame, 0, 0, 0));
+        $dw = (int)round($w * $scale);
+        $dh = (int)round($h * $scale);
+        imagecopyresampled($frame, $image, intdiv(self::WIDTH - $dw, 2), intdiv(self::HEIGHT - $dh, 2), 0, 0, $dw, $dh, $w, $h);
+        return imagepng($frame, $out, 9);
+    }
+
+    /** How many colours a picture has, roughly (on a small copy): a screen of one colour is not worth showing. */
+    public function colours(string $file): int
+    {
+        $image = $this->load($file);
+        if (!$image) {
+            return 0;
+        }
+        $small = imagecreatetruecolor(48, 27);
+        imagecopyresized($small, $image, 0, 0, 0, 0, 48, 27, imagesx($image), imagesy($image));
+        $seen = [];
+        for ($y = 0; $y < 27; $y++) {
+            for ($x = 0; $x < 48; $x++) {
+                $seen[imagecolorat($small, $x, $y) & 0xF0F0F0] = true;
+            }
+        }
+        return count($seen);
+    }
+
     private function load(string $file): ?\GdImage
     {
         $info = @getimagesize($file);

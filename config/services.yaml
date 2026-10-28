@@ -12,6 +12,7 @@ services:
         bind:
             string $appUrl: '%app.url%'
             string $playUrl: '%app.play_url%'
+            string $shooterUrl: '%env(SHOOTER_URL)%'
             string $playHost: '%app.play_host%'
             string $storageDir: '%app.storage_dir%'
             string $engineDir: '%app.engine_dir%'

@@ -5,15 +5,21 @@ framework:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 retry_strategy: { max_retries: 2, delay: 5000 }
+            # the screenshots of games: their own worker, one game at a time (Screenshots)
+            shots:
+                dsn: '%env(SHOTS_TRANSPORT_DSN)%'
+                retry_strategy: { max_retries: 1, delay: 60000 }
             failed: 'doctrine://default?queue_name=failed'
             sync: 'sync://'
         routing:
             App\Message\InitRepository: async
             App\Message\SyncProject: async
+            App\Message\ShootProject: shots
 
 when@test:
     framework:
         messenger:
             transports:
                 async: 'in-memory://'
+                shots: 'in-memory://'
                 failed: 'in-memory://'

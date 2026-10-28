@@ -19,6 +19,7 @@ x-app: &app
     GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
     GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
     JUMPHP_RUNTIMES: ${JUMPHP_RUNTIMES}
+    SHOOTER_URL: http://shooter:3000
   volumes:
     - storage:/app/var/storage
     - engines:/app/public/engine
@@ -60,6 +61,23 @@ services:
     command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=256M"]
     healthcheck: { disable: true }
     depends_on: [db, app]
+
+  # the screenshots of games without a picture: one game at a time, in headless Chrome (shooter/server.cjs)
+  worker-shots:
+    <<: *app
+    command: ["php", "bin/console", "messenger:consume", "shots", "--time-limit=3600", "--memory-limit=256M"]
+    healthcheck: { disable: true }
+    depends_on: [db, app, shooter]
+
+  shooter:
+    image: ghcr.io/puppeteer/puppeteer:24.10.0
+    restart: unless-stopped
+    init: true
+    volumes: ["../shooter:/shooter:ro"]
+    environment:
+      NODE_PATH: /home/pptruser/node_modules
+      SHOOTER_ALLOW: https://${PLAY_HOST}/
+    command: ["node", "/shooter/server.cjs"]
 
   db:
     image: mariadb:11.4
