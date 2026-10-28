@@ -65,6 +65,8 @@ final class PlaygroundTest extends WebTestCase
             $this->get(self::APP, $path);
             self::assertResponseIsSuccessful($path);
         }
+        $this->get(self::APP, '/');
+        self::assertSelectorCount(1, 'a.card[href="/test-game"]');    // once, not again in its category
         $this->get(self::APP, '/test-game');
         self::assertSelectorTextContains('h1', 'Test Game');
         $this->get(self::APP, '/test-game/source/src/Scene/PlayScene.php');

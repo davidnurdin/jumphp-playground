@@ -23,14 +23,18 @@ final class HomeController extends AbstractController
     public function home(): Response
     {
         $categories = $this->categories->ordered();
+        $latest = $this->projects->latest(12);
+        // a shelf per category, without the games already shown in "new games" (each game once on the page)
+        $shown = array_map(fn ($p) => $p->getId(), $latest);
         $shelves = [];
         foreach ($categories as $category) {
-            if ($games = $this->projects->latest(6, $category)) {
-                $shelves[] = ['category' => $category, 'games' => $games];
+            $games = array_filter($this->projects->latest(6 + count($shown), $category), fn ($p) => !in_array($p->getId(), $shown, true));
+            if ($games) {
+                $shelves[] = ['category' => $category, 'games' => array_slice($games, 0, 6)];
             }
         }
         return $this->render('home/index.html.twig', [
-            'latest' => $this->projects->latest(12),
+            'latest' => $latest,
             'shelves' => $shelves,
             'categories' => $categories,
             'counts' => $this->categories->counts(),
