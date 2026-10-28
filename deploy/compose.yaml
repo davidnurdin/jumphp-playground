@@ -36,6 +36,12 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks: [default, traefik]
+    # Traefik routes the container only once healthy: check often so a redeploy is back in seconds
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:2019/metrics >/dev/null || exit 1"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 120s
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK}
@@ -52,6 +58,7 @@ services:
   worker:
     <<: *app
     command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=256M"]
+    healthcheck: { disable: true }
     depends_on: [db, app]
 
   db:
