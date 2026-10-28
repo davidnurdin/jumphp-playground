@@ -7,11 +7,13 @@ use App\Entity\User;
 use App\GitHub\GitHub;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\RatingRepository;
 use App\Security\TokenCipher;
 use App\Service\GameFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
 use App\Service\Slugs;
+use App\Service\Voters;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,11 +55,12 @@ final class GameController extends AbstractController
     }
 
     #[Route('/{slug}', name: 'game', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -10)]
-    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs): Response
+    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs, Request $request, RatingRepository $ratings, Voters $voters): Response
     {
         $project = $this->visible($slug, $user);
         return $this->render('game/show.html.twig', [
             'project' => $project,
+            'my_rating' => $ratings->scoreOf($project, $voters->of($request, $user)),
             'fork_slug' => $user && !$project->isOwnedBy($user) ? $slugs->available(Slugs::fromTitle($project->getSlug() . '-' . $user->getLogin())) : null,
             'frame' => $project->hasSite() ? $this->play($project) . '/' : null,
             'others' => array_filter($this->projects->latest(7, $project->getCategory()), fn ($p) => $p->getId() !== $project->getId()),
@@ -65,14 +68,15 @@ final class GameController extends AbstractController
     }
 
     #[Route('/{slug}/jouer', name: 'game_play', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -10)]
-    public function playPage(string $slug, #[CurrentUser] ?User $user): Response
+    public function playPage(string $slug, #[CurrentUser] ?User $user, Request $request, RatingRepository $ratings, Voters $voters): Response
     {
         $project = $this->visible($slug, $user);
         if (!$project->isPublished()) {
             return $this->redirectToRoute('game', ['slug' => $slug]);
         }
         $this->projects->addPlay($project);
-        return $this->render('game/play.html.twig', ['project' => $project, 'frame' => $this->play($project) . '/play/']);
+        return $this->render('game/play.html.twig', ['project' => $project, 'frame' => $this->play($project) . '/play/',
+            'my_rating' => $ratings->scoreOf($project, $voters->of($request, $user))]);
     }
 
     #[Route('/{slug}/source/{path}', name: 'game_source', requirements: ['slug' => self::SLUG, 'path' => '.*'], defaults: ['path' => ''], methods: ['GET'], priority: -10)]

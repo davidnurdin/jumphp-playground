@@ -24,6 +24,26 @@ class ProjectRepository extends ServiceEntityRepository
             ->where('p.listed = true')->andWhere('p.publishedSha IS NOT NULL');
     }
 
+    public const SORTS = ['note' => 'les mieux notés', 'parties' => 'les plus joués', 'date' => 'les plus récents', 'nom' => 'par nom'];
+
+    /**
+     * All the games of the directory, in an order of SORTS. By mark: the average pulled towards 3 by three
+     * phantom votes, so that one 5-star mark does not beat many 4.5 ones.
+     *
+     * @return Project[]
+     */
+    public function sorted(string $sort): array
+    {
+        $qb = $this->listed();
+        match ($sort) {
+            'note' => $qb->addSelect('(p.ratingSum + 9) / (p.ratingCount + 3) AS HIDDEN score')->orderBy('score', 'DESC')->addOrderBy('p.plays', 'DESC'),
+            'parties' => $qb->orderBy('p.plays', 'DESC'),
+            'nom' => $qb->orderBy('p.title', 'ASC'),
+            default => $qb->orderBy('p.publishedAt', 'DESC'),
+        };
+        return $qb->addOrderBy('p.publishedAt', 'DESC')->getQuery()->getResult();
+    }
+
     /** @return Project[] the games of the directory, newest first */
     public function latest(int $limit = 24, ?Category $category = null, int $offset = 0): array
     {

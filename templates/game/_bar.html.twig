@@ -3,6 +3,7 @@
 	<div class="wrap">
 		<h1><a href="{{ path('game', {slug: project.slug}) }}" style="color: inherit">{{ project.title }}</a></h1>
 		<span class="by">par {{ project.owner.login }} · <a href="{{ path('category', {slug: project.category.slug}) }}">{{ project.category.name }}</a></span>
+		{% include 'game/_rate.html.twig' %}
 		<div class="actions">
 			{% if mode != 'play' %}<a class="btn small primary" href="{{ path('game_play', {slug: project.slug}) }}">▶ Jouer</a>{% endif %}
 			{% if mode == 'play' %}<button class="btn small" type="button" data-fullscreen>⛶ Plein écran</button>{% endif %}

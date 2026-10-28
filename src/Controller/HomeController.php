@@ -38,6 +38,21 @@ final class HomeController extends AbstractController
         ]);
     }
 
+    /** Every game at once: a wall of pictures and names, sorted by mark, plays, date or name. */
+    #[Route('/games', name: 'games', methods: ['GET'])]
+    public function games(Request $request): Response
+    {
+        $sort = (string)$request->query->get('tri', 'note');
+        $sort = isset(ProjectRepository::SORTS[$sort]) ? $sort : 'note';
+        return $this->render('home/games.html.twig', ['games' => $this->projects->sorted($sort), 'sort' => $sort, 'sorts' => ProjectRepository::SORTS]);
+    }
+
+    #[Route('/jeux', name: 'games_fr', methods: ['GET'])]
+    public function gamesFr(): Response
+    {
+        return $this->redirectToRoute('games', [], 301);
+    }
+
     #[Route('/categories', name: 'categories', methods: ['GET'])]
     public function categories(): Response
     {

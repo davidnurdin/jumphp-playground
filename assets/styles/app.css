@@ -200,3 +200,28 @@ pre.source span::before { counter-increment: line; content: counter(line); displ
 }
 dialog { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 22px; width: min(520px, calc(100vw - 32px)); }
 dialog::backdrop { background: rgba(5, 6, 15, .7); }
+
+/* --- the wall of games (/games) ------------------------------------------------------------------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wall-top { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 18px 16px; max-width: 1600px; margin: 0 auto; }
+.sorts { display: flex; flex-wrap: wrap; gap: 6px; }
+.sorts a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 14px; }
+.sorts a:hover { color: var(--ink); text-decoration: none; border-color: var(--yellow); }
+.sorts a.on { background: var(--yellow); border-color: var(--yellow); color: #111; font-weight: 700; }
+.wall { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); padding: 0 16px 40px; max-width: 1600px; margin: 0 auto; }
+.tile { position: relative; display: block; border-radius: 8px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); color: var(--ink); transition: transform .12s, border-color .12s; }
+.tile:hover, .tile:focus-visible { transform: scale(1.03); border-color: var(--yellow); text-decoration: none; z-index: 1; }
+.tile .name { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 8px 10px; }
+.tile .name span { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .name small { color: var(--muted); font-size: 12px; white-space: nowrap; display: flex; gap: 6px; }
+.stars-mini { color: var(--yellow); font-weight: 700; }
+
+/* --- marks: the stars of a game --------------------------------------------------------------------- */
+.rate { display: flex; align-items: center; gap: 8px; }
+.rate .stars { display: inline-flex; }
+.rate .stars button { background: none; border: 0; padding: 0 1px; font-size: 20px; line-height: 1; color: #4a4f6b; cursor: pointer; }
+.rate .stars:hover button { color: var(--yellow); }
+.rate .stars button:hover ~ button { color: #4a4f6b; }
+.rate .stars button.on { color: var(--yellow); }
+.rate .avg { color: var(--ink); font-weight: 700; font-size: 14px; }
+.rate .avg small { color: var(--muted); font-weight: 400; }

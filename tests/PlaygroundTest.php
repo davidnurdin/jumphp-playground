@@ -31,7 +31,7 @@ final class PlaygroundTest extends WebTestCase
         $container = static::getContainer();
         $this->em = $container->get(EntityManagerInterface::class);
         $connection = $this->em->getConnection();
-        foreach (['draft', 'project', 'app_user'] as $table) {
+        foreach (['rating', 'draft', 'project', 'app_user'] as $table) {
             $connection->executeStatement("DELETE FROM $table");
         }
         $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => 'arcade']);
@@ -155,5 +155,38 @@ final class PlaygroundTest extends WebTestCase
         $this->client->loginUser($this->user);
         $this->client->request('GET', 'http://' . self::APP . '/api/projects/test-game/tree', [], [], ['HTTP_X_CSRF_TOKEN' => 'nope']);
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testRatingsAndTheWallOfGames(): void
+    {
+        $rate = function (int $score, string $origin = 'http://jumphp.test'): array {
+            $this->client->request('POST', 'http://' . self::APP . '/test-game/note', [], [], [
+                'CONTENT_TYPE' => 'application/json', 'HTTP_ORIGIN' => $origin,
+            ], json_encode(['score' => $score]));
+            return json_decode((string)$this->client->getResponse()->getContent(), true) ?? [];
+        };
+        // a visitor without an account: a cookie keeps their vote, voting again changes it
+        self::assertEquals(['rating' => 4.0, 'count' => 1, 'mine' => 4], $rate(4));
+        self::assertEquals(['rating' => 2.0, 'count' => 1, 'mine' => 2], $rate(2));
+        // another browser, then a signed-in creator
+        $this->client->getCookieJar()->clear();
+        self::assertEquals(3, $rate(4)['rating']);
+        $this->client->loginUser($this->user);
+        self::assertEquals(['rating' => 3.3, 'count' => 3, 'mine' => 4], $rate(4));
+        $rate(9);
+        self::assertResponseStatusCodeSame(400);
+        $rate(5, 'https://elsewhere.example');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorExists('[data-rate] button.on[data-score="4"]');
+        foreach (['', '?tri=nom', '?tri=date', '?tri=parties', '?tri=n-importe'] as $query) {
+            $this->get(self::APP, '/games' . $query);
+            self::assertResponseIsSuccessful($query);
+            self::assertSelectorTextContains('.wall .tile', 'Test Game');
+        }
+        self::assertSelectorExists('.wall-top a.logo[href="/"]');
+        $this->get(self::APP, '/jeux');
+        self::assertResponseRedirects('/games', 301);
     }
 }

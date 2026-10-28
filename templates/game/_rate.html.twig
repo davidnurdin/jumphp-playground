@@ -1,0 +1,8 @@
+{# the game's mark and the stars to give one (assets/app.js: data-rate) #}
+{% set mine = my_rating ?? null %}
+<div class="rate" data-rate="{{ path('game_rate', {slug: project.slug}) }}" data-mine="{{ mine }}">
+	<span class="stars" role="radiogroup" aria-label="Votre note">
+		{% for i in 1..5 %}<button type="button" data-score="{{ i }}" class="{{ mine and i <= mine ? 'on' }}" aria-label="{{ i }} étoile{{ i > 1 ? 's' }}" title="{{ i }} / 5">★</button>{% endfor %}
+	</span>
+	<span class="avg" data-avg>{% if project.rating %}{{ project.rating|number_format(1, ',') }} <small>({{ project.ratingCount }})</small>{% else %}<small>pas encore noté</small>{% endif %}</span>
+</div>

@@ -90,6 +90,13 @@ class Project
     #[ORM\Column]
     private int $plays = 0;
 
+    /** the players' marks (1 to 5): their sum and count, kept up to date by RatingRepository */
+    #[ORM\Column]
+    private int $ratingSum = 0;
+
+    #[ORM\Column]
+    private int $ratingCount = 0;
+
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Project $forkOf = null;
 
@@ -174,6 +181,9 @@ class Project
     public function isListed(): bool { return $this->listed; }
     public function setListed(bool $listed): void { $this->listed = $listed; $this->touch(); }
     public function getPlays(): int { return $this->plays; }
+    public function getRatingCount(): int { return $this->ratingCount; }
+    /** the average mark, 1 to 5, or null without any */
+    public function getRating(): ?float { return $this->ratingCount ? round($this->ratingSum / $this->ratingCount, 1) : null; }
     public function getForkOf(): ?Project { return $this->forkOf; }
     public function setForkOf(?Project $project): void { $this->forkOf = $project; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }

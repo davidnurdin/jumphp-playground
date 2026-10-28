@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+{% block title %}Tous les jeux · JumPHP playground{% endblock %}
+{% block description %}Tous les jeux rétro écrits en PHP avec JumPHP, gratuits et jouables dans le navigateur : classés par note, par nombre de parties, par date ou par nom.{% endblock %}
+{% block body_class %}wall-page{% endblock %}
+{% block header %}
+<header class="wall-top">
+	<a class="logo" href="{{ path('home') }}" title="Accueil"><span><b>JUM</b>PHP</span><small>playground</small></a>
+	<nav class="sorts" aria-label="Classer les jeux">
+		{% for key, label in sorts %}<a href="{{ path('games', key == 'note' ? {} : {tri: key}) }}" class="{{ key == sort ? 'on' }}"{{ key == sort ? ' aria-current="page"' }}>{{ label }}</a>{% endfor %}
+	</nav>
+</header>
+{% endblock %}
+{% block body %}
+<h1 class="sr-only">Tous les jeux</h1>
+<div class="wall">
+	{% for game in games %}
+		<a class="tile" href="{{ path('game', {slug: game.slug}) }}">
+			<div class="thumb">
+				{% if game.hasThumbnail %}
+					<img src="{{ path('game_thumb', {slug: game.slug, sha: game.publishedSha|slice(0, 12)}) }}" alt="" loading="lazy" width="640" height="360">
+				{% else %}
+					<div class="placeholder" style="--h: {{ (game.slug|length * 37 + game.id * 53) % 360 }}">{{ game.title }}</div>
+				{% endif %}
+			</div>
+			<div class="name">
+				<span>{{ game.title }}</span>
+				<small>
+					{% if game.rating %}<b class="stars-mini">★ {{ game.rating|number_format(1, ',') }}</b>{% endif %}
+					{% if game.plays %}{{ game.plays }} partie{{ game.plays > 1 ? 's' }}{% endif %}
+				</small>
+			</div>
+		</a>
+	{% else %}
+		<p class="muted">Aucun jeu pour l'instant.</p>
+	{% endfor %}
+</div>
+{% endblock %}
+{% block footer %}{% endblock %}

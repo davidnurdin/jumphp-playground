@@ -22,12 +22,14 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <div class="stripe"></div>
+{% block header %}
 <header class="top">
 	<div class="wrap">
 		<a class="logo" href="{{ path('home') }}"><span><b>JUM</b>PHP</span><small>playground</small></a>
 		<nav class="nav" aria-label="Navigation">
 			{% set route = app.request.attributes.get('_route') %}
-			<a href="{{ path('home') }}" class="{{ route == 'home' ? 'on' }}">Jeux</a>
+			<a href="{{ path('home') }}" class="{{ route == 'home' ? 'on' }}">Accueil</a>
+			<a href="{{ path('games') }}" class="{{ route == 'games' ? 'on' }}">Jeux</a>
 			<a href="{{ path('categories') }}" class="{{ route in ['categories', 'category'] ? 'on' }}">Catégories</a>
 			<a href="{{ path('studio') }}" class="{{ route starts with 'studio' ? 'on' }}">Créer</a>
 		</nav>
@@ -44,15 +46,18 @@
 		</div>
 	</div>
 </header>
+{% endblock %}
 {% for type, messages in app.flashes(['success', 'error']) %}
 	{% for message in messages %}<div class="wrap"><div class="flash {{ type }}" role="status">{{ message }}</div></div>{% endfor %}
 {% endfor %}
 <main>{% block body %}{% endblock %}</main>
+{% block footer %}
 <footer class="bottom">
 	<div class="wrap">
 		<span>Jeux écrits en PHP avec <a href="https://github.com/davidnurdin/jumPhp">JumPHP</a> : le même code sur le bureau et dans le navigateur (WebAssembly).</span>
 		<span><a href="{{ path('categories') }}">Annuaire</a> · <a href="{{ path('studio') }}">Créer un jeu</a> · <a href="https://github.com/davidnurdin/jumphp-playground">Code du site</a></span>
 	</div>
 </footer>
+{% endblock %}
 </body>
 </html>

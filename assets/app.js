@@ -38,3 +38,23 @@ if (frame) {
 	});
 	frame.focus();
 }
+
+// a game's mark: the stars of the game bar (templates/game/_rate.html.twig, RatingController)
+for (const box of document.querySelectorAll('[data-rate]')) {
+	const paint = (mine) => box.querySelectorAll('[data-score]').forEach((b) => b.classList.toggle('on', Number(b.dataset.score) <= mine));
+	box.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-score]');
+		if (!button) return;
+		const score = Number(button.dataset.score);
+		paint(score);
+		const response = await fetch(box.dataset.rate, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score }), credentials: 'same-origin' });
+		if (!response.ok) return;
+		const data = await response.json();
+		const avg = box.querySelector('[data-avg]');
+		avg.textContent = String(data.rating).replace('.', ',') + ' ';
+		const count = document.createElement('small');
+		count.textContent = `(${data.count})`;
+		avg.append(count);
+		box.title = 'Merci ! Votre note : ' + score + ' / 5';
+	});
+}
