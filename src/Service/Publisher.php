@@ -129,6 +129,13 @@ final class Publisher
             $fs->remove($final);
             $fs->rename($work, $final);
             $info = array_intersect_key($manifest, self::GAME_DEFAULTS);
+            // an imported project is first named after its repository: the game's own title and description then
+            if ($project->getTitle() === basename($project->getRepoFullName()) && trim((string)($info['title'] ?? '')) !== '') {
+                $project->setTitle(mb_substr(trim((string)$info['title']), 0, 80));
+                if (trim((string)($info['description'] ?? '')) !== '') {
+                    $project->setDescription(mb_substr(trim((string)$info['description']), 0, 1000));
+                }
+            }
             $project->publish($sha, $engine, $info, $site, $thumb);
             if ($warnings) {
                 $project->setStatus(Project::STATUS_READY, implode("\n", $warnings));
