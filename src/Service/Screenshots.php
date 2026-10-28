@@ -43,7 +43,8 @@ final class Screenshots
                     'timeout' => 240,
                 ]);
                 if ($response->getStatusCode() !== 200) {
-                    return 'shooter: ' . substr($response->getContent(false), 0, 300);
+                    // the queue tries again a minute later (messenger.yaml)
+                    throw new \RuntimeException('shooter: ' . substr($response->getContent(false), 0, 300));
                 }
                 file_put_contents($file, $response->getContent());
                 if ($this->thumbnailer->colours($file) > 3) {

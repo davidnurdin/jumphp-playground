@@ -6,7 +6,9 @@ const puppeteer = require('puppeteer');
 
 const ALLOW = (process.env.SHOOTER_ALLOW || '').split(',').map((s) => s.trim()).filter(Boolean);
 const ARGS = ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
-	'--autoplay-policy=no-user-gesture-required', '--mute-audio', ...(process.env.SHOOTER_CHROME_ARGS || '').split(' ').filter(Boolean)];
+	'--autoplay-policy=no-user-gesture-required', '--mute-audio',
+	// SHOOTER_MAP="MAP play.example.org app": the games origin reached straight (not through the front proxy)
+	...(process.env.SHOOTER_MAP ? ['--host-resolver-rules=' + process.env.SHOOTER_MAP] : [])];
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let browser = null;
 let queue = Promise.resolve();

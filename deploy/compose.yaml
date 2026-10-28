@@ -77,6 +77,8 @@ services:
     environment:
       NODE_PATH: /home/pptruser/node_modules
       SHOOTER_ALLOW: https://${PLAY_HOST}/
+      # straight to the app (its own certificate), not through Traefik
+      SHOOTER_MAP: MAP ${PLAY_HOST} app
     command: ["node", "/shooter/server.cjs"]
 
   db:
