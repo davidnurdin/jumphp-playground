@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ status_code == 404 ? 'Page introuvable' : 'Erreur' }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section"><div class="wrap empty-state">
+	<h1 class="pixel" style="font-size: 64px; color: var(--yellow)">{{ status_code }}</h1>
+	<p>{{ status_code == 404 ? 'Ce jeu (ou cette page) n\'existe pas.' : 'Quelque chose a planté de notre côté. Réessayez dans un instant.' }}</p>
+	<a class="btn primary" href="{{ path('home') }}">Retour aux jeux</a>
+</div></section>
+{% endblock %}

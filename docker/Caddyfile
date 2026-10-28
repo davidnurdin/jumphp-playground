@@ -1,0 +1,18 @@
+# Both sites of the playground: the portal (APP_URL) and the isolated games origin (PLAY_URL), one Symfony app.
+# SERVER_NAMES: "jumphp.mimichat.fr, play.jumphp.mimichat.fr" in production (HTTPS by Let's Encrypt), ":80" in dev.
+{
+	frankenphp
+	{$CADDY_GLOBAL_OPTIONS}
+}
+
+{$SERVER_NAMES::80} {
+	root * /app/public
+	encode zstd gzip
+	# the shared JumPHP engines: one URL per version, never changes
+	@engine path /engine/*
+	header @engine Cache-Control "public, max-age=31536000, immutable"
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header -Server
+	php_server
+}

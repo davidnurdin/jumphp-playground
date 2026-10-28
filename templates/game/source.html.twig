@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ path ?: 'Sources' }} – {{ project.title }} – JumPHP playground{% endblock %}
+{% block description %}Le code source PHP de {{ project.title }}, un jeu JumPHP : {{ path ?: 'tous les fichiers' }}.{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'source'} %}
+<section class="wrap" style="padding-bottom: 30px">
+	<div class="crumbs">
+		<a href="{{ path('game_source', {slug: project.slug}) }}">{{ project.gameDir }}</a>
+		{% set acc = '' %}
+		{% for part in crumbs %}{% set acc = acc ~ (acc ? '/') ~ part %} / {% if loop.last %}{{ part }}{% else %}<a href="{{ path('game_source', {slug: project.slug, path: acc}) }}">{{ part }}</a>{% endif %}{% endfor %}
+		<span class="faint">· commit <a href="{{ project.repoUrl }}/tree/{{ project.publishedSha }}/{{ project.gameDir }}{{ path ? '/' ~ path }}">{{ project.publishedSha|slice(0, 7) }}</a></span>
+	</div>
+	{% if file %}
+		<div class="actions" style="margin-bottom: 12px">
+			<a class="btn small" href="{{ raw ~ path }}" rel="noopener">Fichier brut</a>
+			<a class="btn small" href="{{ path('game_edit', {slug: project.slug}) }}#{{ path }}">Modifier dans l'éditeur</a>
+			<span class="faint">{{ (size / 1024)|round(1) }} Ko</span>
+		</div>
+		{% if content is not null %}
+			<pre class="source">{% for line in content|split("\n") %}<span>{{ line }}</span>{% endfor %}</pre>
+		{% elseif image %}
+			<div class="preview-img"><img src="{{ raw ~ path }}" alt="{{ path }}"></div>
+		{% else %}
+			<div class="panel empty-state">Fichier binaire. <a href="{{ raw ~ path }}">Le télécharger</a></div>
+		{% endif %}
+	{% else %}
+		<table class="files">
+			{% if path %}<tr><td colspan="2"><a href="{{ path('game_source', {slug: project.slug, path: crumbs|slice(0, -1)|join('/')}) }}">..</a></td></tr>{% endif %}
+			{% for entry in entries %}
+				<tr>
+					<td>{% if entry.dir %}📁 {% endif %}<a href="{{ path('game_source', {slug: project.slug, path: entry.path}) }}">{{ entry.name }}{{ entry.dir ? '/' }}</a></td>
+					<td class="size">{{ entry.size < 1024 ? entry.size ~ ' o' : (entry.size / 1024)|round(1) ~ ' Ko' }}</td>
+				</tr>
+			{% endfor %}
+		</table>
+	{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ q ? 'Recherche « ' ~ q ~ ' »' : 'Recherche' }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap">
+		<h1>{% if q %}Résultats pour « {{ q }} »{% else %}Chercher un jeu{% endif %}</h1>
+		{% if games %}
+			<div class="grid">{% for game in games %}{% include '_card.html.twig' %}{% endfor %}</div>
+		{% elseif q %}
+			<div class="panel empty-state">Aucun jeu ne correspond. <a href="{{ path('categories') }}">Parcourir les catégories</a></div>
+		{% endif %}
+	</div>
+</section>
+{% endblock %}

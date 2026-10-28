@@ -1,0 +1,22 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    session:
+        cookie_secure: auto
+        cookie_samesite: lax
+        name: jumphp_session
+    csrf_protection: true
+    http_client:
+        scoped_clients:
+            github.client:
+                base_uri: 'https://api.github.com'
+                headers:
+                    Accept: 'application/vnd.github+json'
+                    X-GitHub-Api-Version: '2022-11-28'
+                    User-Agent: 'jumphp-playground'
+                timeout: 20
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

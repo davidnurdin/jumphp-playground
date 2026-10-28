@@ -1,0 +1,39 @@
+# Development: docker compose up -d, then http://jumphp.localhost:8000 (portal) and http://play.jumphp.localhost:8000
+# (games). The code is mounted; production: deploy/compose.yaml.
+services:
+  app:
+    build: { context: ., target: base }
+    image: jumphp-playground:dev
+    ports: ["127.0.0.1:8000:80"]
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes: [".:/app"]
+    environment:
+      SERVER_NAMES: ":80"
+      CADDY_GLOBAL_OPTIONS: "auto_https off"
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/caddy
+      XDG_DATA_HOME: /tmp/caddy
+    env_file: [{ path: .env.local, required: false }]
+    depends_on: [db]
+  worker:
+    image: jumphp-playground:dev
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes: [".:/app"]
+    environment:
+      HOME: /tmp
+    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "-vv"]
+    env_file: [{ path: .env.local, required: false }]
+    restart: unless-stopped
+    depends_on: [db, app]
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: playground
+      MARIADB_USER: playground
+      MARIADB_PASSWORD: playground
+      MARIADB_ROOT_PASSWORD: root
+    volumes: [db:/var/lib/mysql]
+
+volumes:
+  db:
+

@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - src
+        - tests
+    ignoreErrors:
+        - identifier: return.unusedType
+        - identifier: property.unusedType
+        - identifier: property.onlyWritten
+        - identifier: function.alreadyNarrowedType

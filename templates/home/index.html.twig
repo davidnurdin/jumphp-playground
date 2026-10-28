@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+{% block title %}JumPHP playground : jeux rétro en PHP, jouables dans le navigateur{% endblock %}
+{% block head %}
+<script type="application/ld+json">{{ {
+	'@context': 'https://schema.org',
+	'@type': 'WebSite',
+	'name': 'JumPHP playground',
+	'url': app_url,
+	'potentialAction': {'@type': 'SearchAction', 'target': app_url|trim('/', 'right') ~ '/recherche?q={q}', 'query-input': 'required name=q'},
+}|json_encode(constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE') b-or constant('JSON_HEX_TAG'))|raw }}</script>
+{% endblock %}
+{% block body %}
+<section class="hero">
+	<div class="wrap">
+		<h1>Des jeux <em>rétro</em>, écrits en PHP, jouables tout de suite.</h1>
+		<p class="lead">Plates-formes, arcade, remakes 8 bits… {{ total }} jeu{{ total > 1 ? 'x' }} faits avec JumPHP tournent ici dans votre navigateur, sur ordinateur comme sur téléphone. Et le vôtre ? Décrivez-le, votre Claude l'écrit.</p>
+		<div class="actions">
+			<a class="btn primary big" href="#nouveautes">▶ Jouer</a>
+			<a class="btn big" href="{{ path('studio') }}">Créer un jeu</a>
+		</div>
+	</div>
+</section>
+
+<div class="wrap">
+	<nav class="chips" aria-label="Catégories">
+		{% for category in categories %}{% if counts[category.id] is defined %}<a class="chip" href="{{ path('category', {slug: category.slug}) }}">{{ category.name }} <span class="faint">{{ counts[category.id] }}</span></a>{% endif %}{% endfor %}
+		<a class="chip" href="{{ path('categories') }}">Toutes les catégories →</a>
+	</nav>
+</div>
+
+<section class="section" id="nouveautes">
+	<div class="wrap">
+		<div class="section-head"><h2>Nouveautés</h2></div>
+		{% if latest %}
+			<div class="grid">{% for game in latest %}{% include '_card.html.twig' %}{% endfor %}</div>
+		{% else %}
+			<div class="panel empty-state">Pas encore de jeu publié. <a href="{{ path('studio') }}">Soyez le premier !</a></div>
+		{% endif %}
+	</div>
+</section>
+
+{% for shelf in shelves %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h2>{{ shelf.category.name }}</h2>
+			<a href="{{ path('category', {slug: shelf.category.slug}) }}">Tout voir →</a>
+		</div>
+		<div class="grid">{% for game in shelf.games %}{% include '_card.html.twig' %}{% endfor %}</div>
+	</div>
+</section>
+{% endfor %}
+
+<section class="section">
+	<div class="wrap">
+		<div class="section-head"><h2>Créer votre jeu</h2><a href="{{ path('studio') }}">Commencer →</a></div>
+		<div class="steps">
+			<div class="panel"><h3>Connectez GitHub</h3><p class="muted">Votre jeu vit dans un dépôt public de votre compte : il reste à vous.</p></div>
+			<div class="panel"><h3>Décrivez le jeu</h3><p class="muted">Le titre, la catégorie, et ce que vous voulez y jouer, en quelques phrases.</p></div>
+			<div class="panel"><h3>Votre Claude l'écrit</h3><p class="muted">Branché sur le serveur MCP du playground, il code le jeu en PHP, le teste, lui fait une page d'accueil.</p></div>
+			<div class="panel"><h3>Il est en ligne</h3><p class="muted">Chaque push est publié ici en une minute. Tout le monde peut y jouer, lire les sources, le forker.</p></div>
+		</div>
+	</div>
+</section>
+{% endblock %}

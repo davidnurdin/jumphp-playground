@@ -1,0 +1,44 @@
+security:
+    providers:
+        users:
+            entity:
+                class: App\Entity\User
+                property: githubId
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler(/|$)|(_wdt|assets|engine)/)
+            security: false
+        # the games origin: game code runs there, so nothing of a signed-in user may exist there
+        play:
+            request_matcher: App\Security\PlayHostMatcher
+            security: false
+        # the MCP server for the creators' Claude: a personal token, no cookie
+        mcp:
+            pattern: ^/mcp
+            stateless: true
+            provider: users
+            access_token:
+                token_handler: App\Security\McpTokenHandler
+        webhook:
+            pattern: ^/webhook/
+            security: false
+        main:
+            lazy: true
+            provider: users
+            custom_authenticators: [App\Security\GitHubAuthenticator]
+            entry_point: App\Security\GitHubAuthenticator
+            logout:
+                path: logout
+                target: home
+                enable_csrf: true
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 2592000
+                always_remember_me: true
+                signature_properties: [githubId, login]
+
+    access_control:
+        - { path: ^/mcp, roles: ROLE_USER }
+        - { path: ^/studio, roles: ROLE_USER }
+        - { path: ^/api/, roles: ROLE_USER }

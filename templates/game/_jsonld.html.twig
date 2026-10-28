@@ -1,0 +1,20 @@
+{% set page = url('game', {slug: project.slug}) %}
+{% set image = project.site and project.site.image ? page ~ '/' ~ project.site.image : (project.hasThumbnail ? url('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) : null) %}
+<script type="application/ld+json">{{ {
+	'@context': 'https://schema.org',
+	'@type': 'VideoGame',
+	'name': project.title,
+	'description': project.description ?: (project.site.description ?? ''),
+	'url': page,
+	'image': image,
+	'genre': project.category.name,
+	'gamePlatform': ['Navigateur web', 'Ordinateur', 'Mobile'],
+	'applicationCategory': 'Game',
+	'operatingSystem': 'Tout navigateur récent',
+	'isAccessibleForFree': true,
+	'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},
+	'author': {'@type': 'Person', 'name': project.owner.displayName, 'url': 'https://github.com/' ~ project.owner.login},
+	'codeRepository': project.repoUrl,
+	'datePublished': project.publishedAt ? project.publishedAt|date('Y-m-d') : null,
+	'potentialAction': {'@type': 'PlayAction', 'target': url('game_play', {slug: project.slug})},
+}|filter(v => v is not null)|json_encode(constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE') b-or constant('JSON_HEX_TAG'))|raw }}</script>

@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+{% block title %}Mes jeux – studio JumPHP{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h1>Mes jeux</h1>
+			<div class="actions">
+				<a class="btn primary" href="{{ path('studio_new') }}">+ Nouveau jeu</a>
+				<a class="btn" href="{{ path('studio_import') }}">Importer un dépôt</a>
+				<a class="btn" href="{{ path('studio_mcp') }}">Connecter mon Claude (MCP)</a>
+			</div>
+		</div>
+		{% if not app.user.hasMcpToken %}
+			<div class="panel" style="margin-bottom: 18px">
+				<h2>Première fois ?</h2>
+				<p class="muted">Votre Claude (Claude Code, sur votre machine) écrit le jeu à votre place. Donnez-lui accès au playground une fois pour toutes : <a href="{{ path('studio_mcp') }}">créer mon jeton MCP</a>. Il lui faut aussi Docker (JumPHP teste et compile tout dans Docker).</p>
+			</div>
+		{% endif %}
+		{% if projects %}
+			<table class="files">
+				{% for project in projects %}
+					<tr>
+						<td><a href="{{ path('studio_project', {slug: project.slug}) }}">{{ project.title }}</a> <span class="faint">/{{ project.slug }}</span></td>
+						<td><span class="badge {{ project.status }}">{{ project.status }}</span> {% if project.listed %}<span class="badge">annuaire</span>{% endif %}</td>
+						<td class="size">{{ project.publishedAt ? 'publié le ' ~ project.publishedAt|date('d/m/Y H:i') : 'pas encore publié' }}</td>
+					</tr>
+				{% endfor %}
+			</table>
+		{% else %}
+			<div class="panel empty-state">
+				<p>Aucun jeu pour l'instant.</p>
+				<a class="btn primary big" href="{{ path('studio_new') }}">Créer mon premier jeu</a>
+			</div>
+		{% endif %}
+	</div>
+</section>
+{% endblock %}

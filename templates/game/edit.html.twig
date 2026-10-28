@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+{% block title %}Éditer {{ project.title }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block javascripts %}{{ importmap(['app', 'editor']) }}{% endblock %}
+{% block body_class %}full{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'edit'} %}
+<div class="editor" id="editor"
+	data-api="{{ path('api_tree', {slug: project.slug})|replace({'/tree': ''}) }}"
+	data-csrf="{{ csrf_token('editor') }}"
+	data-can-push="{{ can_push ? '1' : '0' }}">
+	<aside class="ed-tree" id="tree" aria-label="Fichiers"><p class="faint" style="padding: 0 10px">Chargement…</p></aside>
+	<section class="ed-main">
+		<div class="ed-head">
+			<span class="path" id="path">Choisissez un fichier</span>
+			<span class="ed-status" id="status"></span>
+			<button class="btn small" type="button" id="btn-new">+ Fichier</button>
+			<button class="btn small" type="button" id="btn-revert" disabled>Annuler mes modifs</button>
+			<button class="btn small" type="button" id="btn-delete" disabled>Supprimer</button>
+			<button class="btn small" type="button" id="btn-preview">▶ Tester</button>
+			{% if can_push %}
+				<button class="btn small primary" type="button" id="btn-push">Envoyer sur GitHub</button>
+			{% else %}
+				<button class="btn small primary" type="button" id="btn-fork">Forker pour garder</button>
+			{% endif %}
+		</div>
+		<div class="ed-code" id="code"><div class="ed-empty">
+			<div>
+				<p>Vos modifications sont gardées pour vous seul (<span id="drafts">{{ drafts }}</span> fichier{{ drafts > 1 ? 's' }} modifié{{ drafts > 1 ? 's' }}).</p>
+				<p class="muted">« Tester » lance le jeu avec elles. {{ can_push ? '« Envoyer sur GitHub » en fait un commit : le jeu est republié.' : 'Ce jeu n\'est pas à vous : forkez-le pour les envoyer dans votre propre dépôt.' }}</p>
+			</div>
+		</div></div>
+	</section>
+	<section class="ed-preview" aria-label="Aperçu">
+		<div class="ed-head"><span class="path">Aperçu avec vos modifications</span><button class="btn small" type="button" id="btn-reload">↻ Relancer</button></div>
+		<iframe id="preview" title="Aperçu du jeu" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+	</section>
+</div>
+
+<dialog id="dlg-new">
+	<form method="dialog">
+		<h2>Nouveau fichier</h2>
+		<div class="field"><label for="new-path">Chemin dans le jeu</label><input id="new-path" placeholder="src/Entity/Enemy.php" required><div class="hint">Relatif à {{ project.gameDir }}/</div></div>
+		<div class="actions"><button class="btn primary" value="ok">Créer</button><button class="btn" value="cancel" formnovalidate>Annuler</button></div>
+	</form>
+</dialog>
+<dialog id="dlg-push">
+	<form method="dialog">
+		<h2>Envoyer sur GitHub</h2>
+		<p class="muted">Un commit sur <code>{{ project.repoFullName }}</code> ({{ project.defaultBranch }}) avec vos fichiers modifiés ; le jeu est republié dans la minute.</p>
+		<div class="field"><label for="push-message">Message du commit</label><input id="push-message" value="Changes from the JumPHP playground editor" required></div>
+		<div class="actions"><button class="btn primary" value="ok">Envoyer</button><button class="btn" value="cancel" formnovalidate>Annuler</button></div>
+	</form>
+</dialog>
+<dialog id="dlg-fork">
+	<form method="post" action="{{ path('game_fork', {slug: project.slug}) }}">
+		<h2>Forker {{ project.title }}</h2>
+		<p class="muted">Une copie du jeu dans votre compte GitHub, publiée ici sous ce nom ; vos modifications y sont transférées et vous pourrez les envoyer.</p>
+		<input type="hidden" name="_token" value="{{ csrf_token('fork-' ~ project.id) }}">
+		<div class="field"><label for="fork-slug">Nom de votre version</label><input id="fork-slug" name="slug" value="{{ fork_slug }}" required></div>
+		<div class="actions"><button class="btn primary" type="submit">Forker</button><button class="btn" type="button" onclick="this.closest('dialog').close()">Annuler</button></div>
+	</form>
+</dialog>
+{% endblock %}

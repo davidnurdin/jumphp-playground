@@ -1,0 +1,63 @@
+{% extends 'base.html.twig' %}
+{% set site = project.site %}
+{% block title %}{{ site and site.title ? site.title : project.title ~ ' – jeu gratuit en ligne (' ~ project.category.name|lower ~ ')' }}{% endblock %}
+{% block description %}{{ site and site.description ? site.description : (project.description ?: project.title ~ ', un jeu écrit en PHP avec JumPHP, à jouer gratuitement dans le navigateur.') }}{% endblock %}
+{% block og_type %}video.game{% endblock %}
+{% block og_image %}{% if site and site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ site.image }}{% elseif project.hasThumbnail %}{{ url('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
+{% block head %}{% if project.publishedSha %}{% include 'game/_jsonld.html.twig' %}{% endif %}{% if not project.listed %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
+{% block body_class %}{{ frame ? 'full' }}{% endblock %}
+{% block body %}
+{% if not project.publishedSha %}
+	<section class="section"><div class="wrap">
+		<h1>{{ project.title }}</h1>
+		<div class="panel">
+			<p><span class="badge {{ project.status }}">{{ project.status }}</span> Ce jeu n'est pas encore publié (vous seul voyez cette page).</p>
+			{% if project.statusMessage %}<pre class="code">{{ project.statusMessage }}</pre>{% endif %}
+			<a class="btn" href="{{ path('studio_project', {slug: project.slug}) }}">Voir le projet</a>
+		</div>
+	</div></section>
+{% elseif frame %}
+	{% include 'game/_bar.html.twig' with {mode: 'site'} %}
+	<iframe class="frame" src="{{ frame }}" title="{{ project.title }}" data-game-frame allow="fullscreen; gamepad; autoplay; clipboard-write; screen-wake-lock" allowfullscreen></iframe>
+{% else %}
+	{% include 'game/_bar.html.twig' with {mode: 'page'} %}
+	<div class="wrap">
+		<section class="game-hero">
+			<a class="thumb" href="{{ path('game_play', {slug: project.slug}) }}" aria-label="Jouer à {{ project.title }}">
+				{% if project.hasThumbnail %}<img src="{{ path('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) }}" alt="{{ project.title }}" width="640" height="360">
+				{% else %}<div class="placeholder" style="--h: {{ (project.slug|length * 37 + project.id * 53) % 360 }}">{{ project.title }}</div>{% endif %}
+			</a>
+			<div>
+				<span class="badge">{{ project.category.name }}</span>
+				<h2 style="font-size: clamp(26px, 4vw, 38px); margin-top: 10px">{{ project.title }}</h2>
+				{% if project.description %}<p class="muted" style="font-size: 18px">{{ project.description }}</p>{% endif %}
+				<p><a class="btn primary big" href="{{ path('game_play', {slug: project.slug}) }}">▶ Jouer</a></p>
+				<dl class="facts">
+					{% if project.gameInfo.controls ?? null %}<dt>Commandes</dt><dd>{{ project.gameInfo.controls }}</dd>{% endif %}
+					<dt>Auteur</dt><dd><a href="https://github.com/{{ project.owner.login }}">{{ project.owner.displayName }}</a></dd>
+					<dt>Mis à jour</dt><dd>{{ project.publishedAt|date('d/m/Y') }}</dd>
+					{% if project.forkOf %}<dt>Fork de</dt><dd><a href="{{ path('game', {slug: project.forkOf.slug}) }}">{{ project.forkOf.title }}</a></dd>{% endif %}
+					<dt>Moteur</dt><dd>JumPHP {{ project.engineVersion }} (PHP en WebAssembly)</dd>
+				</dl>
+			</div>
+		</section>
+		{% if fork_slug %}
+		<section class="panel">
+			<h2>Faire votre version</h2>
+			<p class="muted">Un fork copie ce jeu dans votre compte GitHub et le publie ici sous un autre nom : modifiez-le dans l'éditeur ou avec votre Claude.</p>
+			<form class="actions" method="post" action="{{ path('game_fork', {slug: project.slug}) }}">
+				<input type="hidden" name="_token" value="{{ csrf_token('fork-' ~ project.id) }}">
+				<input name="slug" value="{{ fork_slug }}" aria-label="Nom de votre version" style="max-width: 300px">
+				<button class="btn" type="submit">Forker</button>
+			</form>
+		</section>
+		{% endif %}
+		{% if others %}
+		<section class="section">
+			<div class="section-head"><h2>Dans la même catégorie</h2><a href="{{ path('category', {slug: project.category.slug}) }}">Tout voir →</a></div>
+			<div class="grid">{% for game in others|slice(0, 6) %}{% include '_card.html.twig' %}{% endfor %}</div>
+		</section>
+		{% endif %}
+	</div>
+{% endif %}
+{% endblock %}

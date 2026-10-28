@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	{% set page_title = block('title') is defined ? block('title')|trim : '' %}
+	<title>{{ page_title ?: 'JumPHP playground : jeux rétro en PHP, jouables dans le navigateur' }}</title>
+	<meta name="description" content="{% block description %}Des jeux rétro écrits en PHP avec JumPHP, gratuits et jouables tout de suite dans le navigateur. Créez le vôtre en le décrivant à votre Claude.{% endblock %}">
+	{% block canonical %}<link rel="canonical" href="{{ app_url|trim('/', 'right') ~ app.request.pathInfo }}">{% endblock %}
+	<meta name="theme-color" content="#0b0e1f">
+	<link rel="icon" type="image/png" href="/favicon.png">
+	<meta property="og:site_name" content="JumPHP playground">
+	<meta property="og:locale" content="fr_FR">
+	<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+	<meta property="og:title" content="{{ page_title ?: 'JumPHP playground' }}">
+	<meta property="og:description" content="{{ block('description')|trim }}">
+	<meta property="og:url" content="{{ app_url|trim('/', 'right') ~ app.request.pathInfo }}">
+	<meta property="og:image" content="{% block og_image %}{{ app_url|trim('/', 'right') }}/og.png{% endblock %}">
+	<meta name="twitter:card" content="summary_large_image">
+	{% block head %}{% endblock %}
+	{% block javascripts %}{{ importmap('app') }}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<div class="stripe"></div>
+<header class="top">
+	<div class="wrap">
+		<a class="logo" href="{{ path('home') }}"><span><b>JUM</b>PHP</span><small>playground</small></a>
+		<nav class="nav" aria-label="Navigation">
+			{% set route = app.request.attributes.get('_route') %}
+			<a href="{{ path('home') }}" class="{{ route == 'home' ? 'on' }}">Jeux</a>
+			<a href="{{ path('categories') }}" class="{{ route in ['categories', 'category'] ? 'on' }}">Catégories</a>
+			<a href="{{ path('studio') }}" class="{{ route starts with 'studio' ? 'on' }}">Créer</a>
+		</nav>
+		<form class="search" action="{{ path('search') }}" method="get" role="search">
+			<input type="search" name="q" placeholder="Chercher un jeu…" aria-label="Chercher un jeu" value="{{ app.request.query.get('q') }}">
+		</form>
+		<div class="me">
+			{% if app.user %}
+				<a href="{{ path('studio') }}" title="Mes projets">{% if app.user.avatarUrl %}<img src="{{ app.user.avatarUrl }}&s=60" alt="" width="30" height="30">{% endif %}</a>
+				<form action="{{ path('logout') }}" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}"><button class="btn small" type="submit">Sortir</button></form>
+			{% else %}
+				<a class="btn small" href="{{ path('connect_github') }}">Connexion GitHub</a>
+			{% endif %}
+		</div>
+	</div>
+</header>
+{% for type, messages in app.flashes(['success', 'error']) %}
+	{% for message in messages %}<div class="wrap"><div class="flash {{ type }}" role="status">{{ message }}</div></div>{% endfor %}
+{% endfor %}
+<main>{% block body %}{% endblock %}</main>
+<footer class="bottom">
+	<div class="wrap">
+		<span>Jeux écrits en PHP avec <a href="https://github.com/davidnurdin/jumPhp">JumPHP</a> : le même code sur le bureau et dans le navigateur (WebAssembly).</span>
+		<span><a href="{{ path('categories') }}">Annuaire</a> · <a href="{{ path('studio') }}">Créer un jeu</a> · <a href="https://github.com/davidnurdin/jumphp-playground">Code du site</a></span>
+	</div>
+</footer>
+</body>
+</html>

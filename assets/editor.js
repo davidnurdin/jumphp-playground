@@ -1,0 +1,225 @@
+// The online editor: a game's files with the user's drafts (saved as they type), CodeMirror, a preview of the
+// game with the drafts (games origin, signed token), push to GitHub or fork. Talks to EditorApiController.
+import { EditorView, basicSetup } from 'codemirror';
+import { EditorState } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { php } from '@codemirror/lang-php';
+import { javascript } from '@codemirror/lang-javascript';
+import { html } from '@codemirror/lang-html';
+import { css } from '@codemirror/lang-css';
+import { json } from '@codemirror/lang-json';
+import { yaml } from '@codemirror/lang-yaml';
+import { markdown } from '@codemirror/lang-markdown';
+
+const root = document.getElementById('editor');
+if (root) {
+	const $ = (id) => document.getElementById(id);
+	const API = root.dataset.api;
+	const CSRF = root.dataset.csrf;
+	const tree = $('tree');
+	const code = $('code');
+	const status = $('status');
+	let files = [];
+	let current = null;         // {path, view}
+	let saveTimer = null;
+
+	const api = async (method, path, body) => {
+		const response = await fetch(API + path, {
+			method,
+			headers: { 'X-CSRF-Token': CSRF, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+			body: body ? JSON.stringify(body) : undefined,
+			credentials: 'same-origin',
+		});
+		const data = await response.json().catch(() => ({}));
+		if (!response.ok) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
+		return data;
+	};
+	const say = (text) => { status.textContent = text; };
+
+	const language = (path) => {
+		if (/\.php$/i.test(path)) return php();
+		if (/\.(m?js)$/i.test(path)) return javascript();
+		if (/\.html?$/i.test(path)) return html();
+		if (/\.css$/i.test(path)) return css();
+		if (/\.(json|tmj|tsj|webmanifest)$/i.test(path)) return json();
+		if (/\.ya?ml$/i.test(path)) return yaml();
+		if (/\.md$/i.test(path)) return markdown();
+		return [];
+	};
+
+	// --- the tree --------------------------------------------------------------------------------------
+	function build(list) {
+		const top = { dirs: {}, files: [] };
+		for (const file of list) {
+			const parts = file.path.split('/');
+			let node = top;
+			for (const dir of parts.slice(0, -1)) node = node.dirs[dir] ||= { dirs: {}, files: [] };
+			node.files.push(file);
+		}
+		return top;
+	}
+	function render(node, into, prefix = '') {
+		for (const name of Object.keys(node.dirs).sort()) {
+			const details = document.createElement('details');
+			const summary = document.createElement('summary');
+			summary.textContent = name;
+			details.append(summary);
+			const children = document.createElement('div');
+			children.className = 'children';
+			render(node.dirs[name], children, prefix + name + '/');
+			details.append(children);
+			details.open = (current?.path || location.hash.slice(1)).startsWith(prefix + name + '/') || prefix === '' && ['src', 'config'].includes(name);
+			into.append(details);
+		}
+		for (const file of node.files.sort((a, b) => a.path.localeCompare(b.path))) {
+			const a = document.createElement('a');
+			a.href = '#' + file.path;
+			a.textContent = file.path.split('/').pop();
+			a.title = file.path;
+			a.dataset.path = file.path;
+			if (file.state !== 'published') a.classList.add(file.state);
+			if (current && current.path === file.path) a.classList.add('on');
+			into.append(a);
+		}
+	}
+	async function loadTree() {
+		files = (await api('GET', '/tree')).files;
+		tree.replaceChildren();
+		render(build(files), tree);
+		$('drafts').textContent = files.filter((f) => f.state !== 'published').length;
+	}
+	tree.addEventListener('click', (event) => {
+		const link = event.target.closest('a[data-path]');
+		if (!link) return;
+		event.preventDefault();
+		open(link.dataset.path);
+	});
+
+	// --- a file ----------------------------------------------------------------------------------------
+	async function open(path) {
+		await flush();
+		say('…');
+		let data;
+		try { data = await api('GET', '/file?path=' + encodeURIComponent(path)); } catch (e) { say(e.message); return; }
+		history.replaceState(null, '', '#' + path);
+		$('path').textContent = path;
+		const state = files.find((f) => f.path === path)?.state || 'published';
+		$('btn-revert').disabled = state === 'published';
+		$('btn-delete').disabled = state === 'deleted';
+		code.replaceChildren();
+		if (!data.text) {
+			current = { path, view: null };
+			const box = document.createElement('div');
+			box.className = 'ed-empty';
+			if (/\.(png|jpe?g|gif|webp)$/i.test(path)) {
+				const img = document.createElement('img');
+				img.src = data.url;
+				img.alt = path;
+				img.style.cssText = 'image-rendering: pixelated; max-width: 100%; max-height: 100%';
+				box.append(img);
+			} else {
+				box.textContent = `Fichier binaire (${Math.round(data.size / 1024)} Ko) : il ne s'édite pas ici.`;
+			}
+			code.append(box);
+		} else {
+			const view = new EditorView({
+				parent: code,
+				state: EditorState.create({
+					doc: data.content,
+					extensions: [basicSetup, keymap.of([indentWithTab]), oneDark, language(path),
+						EditorView.updateListener.of((update) => { if (update.docChanged) schedule(); })],
+				}),
+			});
+			current = { path, view };
+		}
+		for (const a of tree.querySelectorAll('a.on')) a.classList.remove('on');
+		tree.querySelector(`a[data-path="${CSS.escape(path)}"]`)?.classList.add('on');
+		say(data.draft ? 'modifié (brouillon)' : '');
+	}
+	function schedule() {
+		say('…');
+		clearTimeout(saveTimer);
+		saveTimer = setTimeout(save, 700);
+	}
+	async function save() {
+		saveTimer = null;
+		if (!current?.view) return;
+		try {
+			const result = await api('PUT', '/file', { path: current.path, content: current.view.state.doc.toString() });
+			say(result.state === 'published' ? 'identique à la version publiée' : 'enregistré');
+			const known = files.find((f) => f.path === current.path);
+			if (!known || known.state !== result.state) await loadTree();
+			$('btn-revert').disabled = result.state === 'published';
+		} catch (e) { say('erreur : ' + e.message); }
+	}
+	async function flush() { if (saveTimer) { clearTimeout(saveTimer); await save(); } }
+	addEventListener('keydown', (event) => {
+		if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); flush(); }
+	});
+	addEventListener('beforeunload', (event) => { if (saveTimer) { event.preventDefault(); } });
+
+	// --- actions ---------------------------------------------------------------------------------------
+	$('btn-new').addEventListener('click', () => {
+		const dialog = $('dlg-new');
+		dialog.returnValue = '';
+		dialog.showModal();
+		dialog.addEventListener('close', async () => {
+			const path = $('new-path').value.trim().replace(/^\/+/, '');
+			if (dialog.returnValue !== 'ok' || !path) return;
+			try {
+				await api('PUT', '/file', { path, content: '' });
+				await loadTree();
+				open(path);
+			} catch (e) { say(e.message); }
+		}, { once: true });
+	});
+	$('btn-revert').addEventListener('click', async () => {
+		if (!current) return;
+		clearTimeout(saveTimer); saveTimer = null;
+		await api('POST', '/discard', { path: current.path });
+		await loadTree();
+		if (files.some((f) => f.path === current.path)) open(current.path);
+		else { code.replaceChildren(); $('path').textContent = ''; current = null; }
+	});
+	$('btn-delete').addEventListener('click', async () => {
+		if (!current || !confirmDelete(current.path)) return;
+		clearTimeout(saveTimer); saveTimer = null;
+		await api('DELETE', '/file?path=' + encodeURIComponent(current.path));
+		await loadTree();
+		open(current.path).catch(() => {});
+	});
+	function confirmDelete(path) { return window.confirm(`Supprimer ${path} (dans vos modifications) ?`); }
+
+	const preview = $('preview');
+	async function play() {
+		await flush();
+		root.classList.remove('no-preview');
+		preview.src = (await api('GET', '/preview')).url;
+	}
+	$('btn-preview').addEventListener('click', play);
+	$('btn-reload').addEventListener('click', play);
+	root.classList.add('no-preview');
+
+	$('btn-push')?.addEventListener('click', async () => {
+		await flush();
+		const dialog = $('dlg-push');
+		dialog.returnValue = '';
+		dialog.showModal();
+		dialog.addEventListener('close', async () => {
+			if (dialog.returnValue !== 'ok') return;
+			say('envoi…');
+			try {
+				const result = await api('POST', '/push', { message: $('push-message').value });
+				say('envoyé : ' + result.commit.slice(0, 7) + ' (publication en cours)');
+				await loadTree();
+				if (current) open(current.path);
+			} catch (e) { say(e.message); }
+		}, { once: true });
+	});
+	$('btn-fork')?.addEventListener('click', async () => { await flush(); $('dlg-fork').showModal(); });
+
+	loadTree().then(() => { if (location.hash.length > 1) open(decodeURIComponent(location.hash.slice(1))); })
+		.catch((e) => { tree.textContent = e.message; });
+}

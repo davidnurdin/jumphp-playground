@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+{% block title %}Importer un dépôt – studio JumPHP{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap two">
+		<form method="post" class="panel">
+			<h1>Importer un projet JumPHP</h1>
+			<input type="hidden" name="_token" value="{{ csrf_token('studio-import') }}">
+			<div class="field"><label for="repository">Dépôt GitHub</label><input id="repository" name="repository" value="{{ form.repository }}" placeholder="vous/mon-jeu" required><div class="hint">Public, et vous devez pouvoir y écrire. Le jeu est le dossier <code>games/&lt;id&gt;</code> (le seul, ou celui qui porte l'adresse choisie).</div></div>
+			<div class="field"><label for="slug">Adresse</label><input id="slug" name="slug" value="{{ form.slug }}" pattern="[a-z][a-z0-9-]{1,38}[a-z0-9]" required></div>
+			<div class="field">
+				<label for="category">Catégorie</label>
+				<select id="category" name="category" required>
+					<option value="">—</option>
+					{% for category in categories %}<option value="{{ category.slug }}" {{ form.category == category.slug ? 'selected' }}>{{ category.name }}</option>{% endfor %}
+				</select>
+			</div>
+			<button class="btn primary" type="submit">Importer</button>
+		</form>
+		<aside class="panel"><h2>Bon à savoir</h2><p class="muted">Le playground charge le jeu fichier par fichier avec son moteur partagé : seules les dépendances du moteur JumPHP sont disponibles (pas d'autre paquet Composer). Un webhook publie chaque push.</p></aside>
+	</div>
+</section>
+{% endblock %}

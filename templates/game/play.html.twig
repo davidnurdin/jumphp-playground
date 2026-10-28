@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+{% block title %}Jouer à {{ project.title }} – JumPHP playground{% endblock %}
+{% block description %}{{ project.description ?: project.title }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ url('game', {slug: project.slug}) }}">{% endblock %}
+{% block body_class %}full{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'play'} %}
+<iframe class="frame" src="{{ frame }}" title="{{ project.title }}" data-game-frame data-quit="{{ path('game', {slug: project.slug}) }}" allow="fullscreen; gamepad; autoplay; clipboard-write; screen-wake-lock" allowfullscreen></iframe>
+{% endblock %}

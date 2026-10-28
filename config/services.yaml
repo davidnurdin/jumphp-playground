@@ -1,0 +1,35 @@
+parameters:
+    app.url: '%env(APP_URL)%'
+    app.play_url: '%env(PLAY_URL)%'
+    app.play_host: '%env(PLAY_HOST)%'
+    app.storage_dir: '%kernel.project_dir%/var/storage'
+    app.engine_dir: '%kernel.project_dir%/public/engine'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            string $appUrl: '%app.url%'
+            string $playUrl: '%app.play_url%'
+            string $playHost: '%app.play_host%'
+            string $storageDir: '%app.storage_dir%'
+            string $engineDir: '%app.engine_dir%'
+            string $jumphpRepo: '%env(JUMPHP_REPO)%'
+            string $runtimes: '%env(JUMPHP_RUNTIMES)%'
+            string $tokenKey: '%env(TOKEN_KEY)%'
+            string $kernelSecret: '%kernel.secret%'
+            string $githubClientId: '%env(GITHUB_CLIENT_ID)%'
+            string $githubClientSecret: '%env(GITHUB_CLIENT_SECRET)%'
+            Symfony\Contracts\HttpClient\HttpClientInterface $githubHttp: '@github.client'
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Entity/'
+            - '../src/Message/'
+            - '../src/Kernel.php'
+
+when@test:
+    parameters:
+        app.storage_dir: '%kernel.project_dir%/var/storage-test'

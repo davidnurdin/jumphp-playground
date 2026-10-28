@@ -1,0 +1,10 @@
+twig:
+    file_name_pattern: '*.twig'
+    form_themes: []
+    globals:
+        app_url: '%app.url%'
+        play_url: '%app.play_url%'
+
+when@test:
+    twig:
+        strict_variables: true

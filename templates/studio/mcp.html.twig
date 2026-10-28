@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+{% block title %}Connecter mon Claude – studio JumPHP{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap two">
+		<div class="panel">
+			<h1>Connecter votre Claude</h1>
+			<p class="muted">Le serveur MCP du playground donne à votre Claude Code (sur votre machine) les outils pour créer vos projets, les publier et lire leurs erreurs. Il agit avec votre compte : gardez le jeton pour vous.</p>
+			{% if token %}
+				<div class="flash success">Votre jeton (affiché une seule fois) : copiez la commande maintenant.</div>
+				<div class="cmd"><code id="cmd-mcp">claude mcp add --transport http --scope user jumphp {{ mcp_url }} --header "Authorization: Bearer {{ token }}"</code><button class="btn small" type="button" data-copy="#cmd-mcp">Copier</button></div>
+				<p class="muted">Puis vérifiez avec <code>claude mcp list</code> : <code>jumphp</code> doit être « connected ».</p>
+			{% elseif app.user.hasMcpToken %}
+				<p>Un jeton est actif (<code>{{ app.user.mcpTokenHint }}</code>). Un nouveau jeton remplace l'ancien.</p>
+			{% endif %}
+			<form method="post" class="actions">
+				<input type="hidden" name="_token" value="{{ csrf_token('studio-mcp') }}">
+				<button class="btn primary" name="action" value="new" type="submit">{{ app.user.hasMcpToken ? 'Nouveau jeton' : 'Créer mon jeton' }}</button>
+				{% if app.user.hasMcpToken %}<button class="btn danger" name="action" value="revoke" type="submit">Révoquer</button>{% endif %}
+			</form>
+		</div>
+		<aside class="panel">
+			<h2>Ce qu'il faut sur votre machine</h2>
+			<ul class="muted" style="padding-left: 20px">
+				<li><a href="https://claude.com/claude-code">Claude Code</a></li>
+				<li>git, et un accès à GitHub (<code>gh auth login</code> ou une clé SSH) pour pousser</li>
+				<li>Docker : JumPHP fait tout dedans (tests, captures d'écran, version navigateur)</li>
+			</ul>
+			<h2>Les outils</h2>
+			<p class="muted"><code>create_project</code>, <code>get_project</code>, <code>sync_project</code>, <code>update_project</code>, <code>import_project</code>, <code>list_projects</code>, <code>list_categories</code>, et pour s'inspirer : <code>list_games</code>, <code>list_game_files</code>, <code>read_game_file</code>.</p>
+		</aside>
+	</div>
+</section>
+{% endblock %}
