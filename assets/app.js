@@ -39,6 +39,19 @@ if (frame) {
 	frame.focus();
 }
 
+// the kind of a new game (Studio): its explanation, and a remake goes in the "remakes" category
+const kind = document.querySelector('[data-kind]');
+if (kind) {
+	const brief = document.getElementById('brief');
+	const defaultPlaceholder = brief?.placeholder;
+	kind.addEventListener('change', () => {
+		for (const hint of document.querySelectorAll('[data-kind-hint]')) hint.hidden = hint.dataset.kindHint !== kind.value;
+		const category = document.getElementById('category');
+		if (kind.value === 'cpc' && category && !category.value) category.value = 'remake';
+		if (brief) brief.placeholder = kind.value === 'cpc' ? brief.dataset.placeholderCpc : defaultPlaceholder;
+	});
+}
+
 // a game's mark: the stars of the game bar (templates/game/_rate.html.twig, RatingController)
 for (const box of document.querySelectorAll('[data-rate]')) {
 	const paint = (mine) => box.querySelectorAll('[data-score]').forEach((b) => b.classList.toggle('on', Number(b.dataset.score) <= mine));

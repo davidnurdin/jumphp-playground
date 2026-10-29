@@ -125,11 +125,47 @@ final class RepoInitializer
     {
         $url = rtrim($this->appUrl, '/') . '/' . $project->getSlug();
         $id = $project->getGameId();
+        $kind = match ($project->getKind()) {
+            'cpc' => <<<MD
+
+## A remake of an Amstrad CPC game: use dsk2jumphp
+
+This game is the remake of an Amstrad CPC game, **with its original graphics, music, sounds, levels and
+rules**, taken from its disc. Follow `AGENTS.md` section 12 to the letter:
+
+- use **[dsk2jumphp](https://github.com/davidnurdin/dsk2jumphp)** (headless CPC emulator, DSK / dump / Z80 /
+  sound tools, the method): clone it **outside this repository**, `make -C <it> test`, link its Claude skill
+  (`.claude/skills/dsk2jumphp`), read its `AGENTS.md` and `docs/method.md`. Do not write an emulator, a
+  disassembler or a DSK reader yourself;
+- **ask the user for the path of the game's `.dsk` on their computer** (never download a disc or CPC ROMs;
+  ROMs only from the user's machine if the game needs the firmware);
+- keep the extraction reproducible in `games/$id/tools/extract/` (scripts + README of the addresses + one
+  script that rebuilds `assets/` from the .dsk path); **never commit the .dsk, ROMs or memory dumps**;
+- the original's screen size, rules and timings (50 Hz); check it side by side with the emulator
+  (`cpc -s` against `bin/jumphp shot`);
+- if the extracted assets must not be public, keep them out of git (`.gitignore`) and give them to the
+  playground as **private files** (Studio → the project → "Fichiers privés"): the game loads them, no
+  repository holds them.
+- Example: the Rainbow Islands remake, https://github.com/davidnurdin/rainbow-island (`tools/extract/`).
+
+MD,
+            'port' => <<<MD
+
+## A port of an existing game
+
+This game is the port to PHP of an existing game whose source code exists (see above where it is). Keep its
+rules, levels and feel; translate its code into readable PHP in the JumPHP structure (scenes, entities), with
+its assets if their license allows them in a public repository (else: private files of the playground, Studio →
+the project → "Fichiers privés"). Credit the original authors and keep their license.
+
+MD,
+            default => '',
+        };
         return <<<MD
 # {$project->getTitle()}
 
 {$project->getBrief()}
-
+$kind
 ---
 
 ## The JumPHP playground

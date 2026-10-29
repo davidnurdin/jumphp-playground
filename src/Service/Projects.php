@@ -37,7 +37,7 @@ final class Projects
     }
 
     /** A new game: its GitHub repository (made now), then the project inside (InitRepository, a few seconds). */
-    public function create(User $user, string $title, string $slug, Category $category, string $description, string $brief): Project
+    public function create(User $user, string $title, string $slug, Category $category, string $description, string $brief, string $kind = 'original'): Project
     {
         $title = trim($title);
         if ($title === '' || mb_strlen($title) > 80) {
@@ -58,6 +58,7 @@ final class Projects
         $project = new Project($user, $slug, $title, $category, $repo['full_name'], 'games/' . $slug);
         $project->setDescription(trim($description));
         $project->setBrief(trim($brief));
+        $project->setKind($kind);
         $project->setListed(false);
         $this->em->persist($project);
         $this->em->flush();

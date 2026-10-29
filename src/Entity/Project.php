@@ -19,6 +19,13 @@ class Project
     public const STATUS_READY = 'ready';         // published
     public const STATUS_ERROR = 'error';         // the last creation / sync failed (statusMessage)
 
+    /** what kind of game: it tells the creator's Claude how to make it (BRIEF.md) */
+    public const KINDS = [
+        'original' => 'Création originale',
+        'cpc' => 'Remake d\'un jeu Amstrad CPC (depuis sa disquette .dsk)',
+        'port' => 'Portage d\'un jeu existant (dont on a le code source)',
+    ];
+
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
@@ -86,6 +93,9 @@ class Project
     /** shown in the directory (an owner can hide a game) */
     #[ORM\Column]
     private bool $listed = true;
+
+    #[ORM\Column(length: 20, options: ['default' => 'original'])]
+    private string $kind = 'original';
 
     /** its picture is a screenshot made by the playground (Screenshots), not one of its own */
     #[ORM\Column]
@@ -170,6 +180,8 @@ class Project
     public function hasSite(): bool { return $this->site !== null; }
     public function hasThumbnail(): bool { return $this->hasThumbnail; }
     public function setHasThumbnail(bool $has): void { $this->hasThumbnail = $has; }
+    public function getKind(): string { return $this->kind; }
+    public function setKind(string $kind): void { $this->kind = isset(self::KINDS[$kind]) ? $kind : 'original'; }
     public function isShotThumbnail(): bool { return $this->shotThumbnail; }
     public function setShotThumbnail(bool $shot): void { $this->shotThumbnail = $shot; }
 

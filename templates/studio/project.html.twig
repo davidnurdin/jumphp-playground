@@ -49,6 +49,7 @@
 					<dl class="facts">
 						<dt>Adresse</dt><dd><a href="{{ path('game', {slug: project.slug}) }}">/{{ project.slug }}</a></dd>
 						<dt>Dépôt</dt><dd><a href="{{ project.repoUrl }}">{{ project.repoFullName }}</a></dd>
+						<dt>Type</dt><dd>{{ constant('App\\Entity\\Project::KINDS')[project.kind] }}</dd>
 						<dt>Jeu</dt><dd><code>{{ project.gameDir }}</code></dd>
 						<dt>Commit</dt><dd>{% if project.publishedSha %}<a href="{{ project.repoUrl }}/commit/{{ project.publishedSha }}">{{ project.publishedSha|slice(0, 7) }}</a> · {{ project.publishedAt|date('d/m H:i') }}{% else %}—{% endif %}</dd>
 						<dt>Moteur</dt><dd>{{ project.engineVersion ?: '—' }}</dd>

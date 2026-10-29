@@ -117,6 +117,8 @@ final class PlaygroundTest extends WebTestCase
         self::assertSame('2025-06-18', $init['result']['protocolVersion']);
         $call(['jsonrpc' => '2.0', 'method' => 'notifications/initialized']);
         self::assertResponseStatusCodeSame(202);
+        $tools = array_column($call(['jsonrpc' => '2.0', 'id' => 9, 'method' => 'tools/list'])['result']['tools'], null, 'name');
+        self::assertSame(['original', 'cpc', 'port'], $tools['create_project']['inputSchema']['properties']['kind']['enum']);
         $who = $call(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'whoami', 'arguments' => []]]);
         self::assertSame('tester', $who['result']['structuredContent']['login']);
         $file = $call(['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'read_game_file', 'arguments' => ['slug' => 'test-game', 'path' => 'src/Scene/PlayScene.php']]]);
@@ -146,6 +148,11 @@ final class PlaygroundTest extends WebTestCase
         $states = array_column($api('GET', '/tree')['files'], 'state', 'path');
         self::assertSame(['config/game.yaml' => 'deleted', 'src/Entity/Hero.php' => 'added', 'src/Scene/PlayScene.php' => 'modified'], $states);
         self::assertStringContainsString('changed', $api('GET', '/file?path=src/Scene/PlayScene.php')['content']);
+
+        // a new game: its kind (an Amstrad CPC remake is made with dsk2jumphp)
+        $this->client->request('GET', 'http://' . self::APP . '/studio/nouveau');
+        self::assertSelectorExists('select#kind option[value="cpc"]');
+        self::assertSelectorTextContains('[data-kind-hint="cpc"]', 'dsk2jumphp');
 
         // the preview: the games origin gets the drafts through a signed token, without the session
         $url = $api('GET', '/preview')['url'];

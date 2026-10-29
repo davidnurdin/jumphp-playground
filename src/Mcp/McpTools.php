@@ -40,7 +40,9 @@ A project is a public GitHub repository of the user (a JumPHP project, the game 
 playground publishes it after each push to its main branch.
 
 To make a game for the user:
-1. create_project (title, description, category from list_categories, and the brief: what the user wants),
+1. create_project (title, description, category from list_categories, kind, and the brief: what the user wants;
+   kind "cpc" for the remake of an Amstrad CPC game from its .dsk: then dsk2jumphp does the extraction, see
+   BRIEF.md and AGENTS.md section 12, and ask the user for the path of their .dsk),
    then get_project until its status is no longer "creating" (a few seconds).
 2. git clone the repository (clone_url), then work in it as JumPHP's AGENTS.md says: bin/jumphp install <id>,
    write the game in games/<id>/, bin/jumphp test, look at the screenshots (bin/jumphp shot), browser build.
@@ -66,6 +68,7 @@ TXT;
                 'description' => ['type' => 'string', 'description' => 'one or two sentences for the directory'],
                 'category' => ['type' => 'string', 'description' => 'a category slug (list_categories)'],
                 'brief' => ['type' => 'string', 'description' => 'what the game should be: the user\'s request, as complete as possible'],
+                'kind' => ['type' => 'string', 'enum' => array_keys(Project::KINDS), 'description' => 'original (a new game, default), cpc (a remake of an Amstrad CPC game from its .dsk disc: made with dsk2jumphp on the user\'s computer), port (a port of an existing game whose source code exists)'],
                 'slug' => ['type' => 'string', 'description' => 'optional: URL name and repository name (a-z, 0-9, -); default from the title'],
             ], ['title', 'description', 'category', 'brief']),
             $this->tool('get_project', 'A project: status (creating, empty, ready, error), last publication, errors, repository, clone URL, game folder, URLs.', ['slug' => $slug], ['slug'], true),
@@ -144,7 +147,7 @@ TXT;
         $title = $this->string($args, 'title');
         $slug = trim((string)($args['slug'] ?? '')) ?: $this->slugs->available(Slugs::fromTitle($title));
         $project = $this->projectService->create($user, $title, $slug, $this->category($args),
-            $this->string($args, 'description'), $this->string($args, 'brief'));
+            $this->string($args, 'description'), $this->string($args, 'brief'), (string)($args['kind'] ?? 'original'));
         return $this->details($project) + ['next' => 'The repository is being made: call get_project in a few seconds, until status is "empty" or "ready", then git clone it.'];
     }
 
@@ -246,6 +249,7 @@ TXT;
             'engine' => $p->getEngineVersion(),
             'has_site' => $p->hasSite(),
             'play' => $this->playUrl($p),
+            'kind' => $p->getKind(),
             'brief' => $p->getBrief(),
         ];
     }

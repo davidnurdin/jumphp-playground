@@ -13,6 +13,15 @@
 				<div class="hint">{{ app_url|trim('/', 'right') }}/<b>adresse</b> — c'est aussi le nom du dépôt GitHub créé dans votre compte.</div>
 			</div>
 			<div class="field">
+				<label for="kind">Type de jeu</label>
+				<select id="kind" name="kind" data-kind>
+					{% for key, label in kinds %}<option value="{{ key }}" {{ form.kind == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+				</select>
+				<div class="hint" data-kind-hint="original" {{ form.kind != 'original' ? 'hidden' }}>Un jeu nouveau : décrivez-le, votre Claude l'écrit.</div>
+				<div class="hint" data-kind-hint="cpc" {{ form.kind != 'cpc' ? 'hidden' }}>Le jeu refait avec ses graphismes, sa musique et ses règles d'origine. Votre Claude utilisera <a href="https://github.com/davidnurdin/dsk2jumphp">dsk2jumphp</a> (émulateur CPC, extraction des sprites, des niveaux et du son) sur votre ordinateur : gardez la disquette <code>.dsk</code> du jeu à portée, il vous demandera son chemin. Elle n'est jamais publiée.</div>
+				<div class="hint" data-kind-hint="port" {{ form.kind != 'port' ? 'hidden' }}>Un jeu dont le code source existe (C, Pascal, BASIC, assembleur…) : indiquez où le trouver dans la description, votre Claude le traduit en PHP.</div>
+			</div>
+			<div class="field">
 				<label for="category">Catégorie</label>
 				<select id="category" name="category" required>
 					<option value="">—</option>
@@ -22,7 +31,7 @@
 			<div class="field"><label for="description">Description courte</label><input id="description" name="description" value="{{ form.description }}" maxlength="300"><div class="hint">Une ou deux phrases pour l'annuaire.</div></div>
 			<div class="field">
 				<label for="brief">Votre jeu, en détail</label>
-				<textarea id="brief" name="brief" rows="10" required placeholder="Un jeu de plates-formes où un chat ninja doit récupérer des poissons sur les toits de Paris. Écran 320×180, pixel art, 5 niveaux, des pigeons ennemis, un boss…">{{ form.brief }}</textarea>
+				<textarea id="brief" name="brief" rows="10" required data-placeholder-cpc="Le jeu Amstrad CPC « … » (éditeur, année), refait à l'identique : mêmes niveaux, sprites, musique et sons, extraits de sa disquette. La disquette : ~/jeux/xxx.dsk. Commandes au clavier, à la manette et au tactile." placeholder="Un jeu de plates-formes où un chat ninja doit récupérer des poissons sur les toits de Paris. Écran 320×180, pixel art, 5 niveaux, des pigeons ennemis, un boss…">{{ form.brief }}</textarea>
 				<div class="hint">C'est ce que lira votre Claude (dans BRIEF.md) : le genre, les règles, les niveaux, le style graphique, les commandes, la page d'accueil voulue…</div>
 			</div>
 			<button class="btn primary big" type="submit">Créer le jeu</button>

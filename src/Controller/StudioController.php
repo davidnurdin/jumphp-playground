@@ -4,9 +4,9 @@ namespace App\Controller;
 
 use App\Entity\Project;
 use App\Entity\User;
+use App\Message\ShootProject;
 use App\Repository\CategoryRepository;
 use App\Repository\ProjectRepository;
-use App\Message\ShootProject;
 use App\Service\PrivateFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
@@ -46,7 +46,7 @@ final class StudioController extends AbstractController
     #[Route('/nouveau', name: 'studio_new', methods: ['GET', 'POST'])]
     public function new(Request $request, #[CurrentUser] User $user, Slugs $slugs): Response
     {
-        $form = ['title' => '', 'slug' => '', 'category' => '', 'description' => '', 'brief' => ''];
+        $form = ['title' => '', 'slug' => '', 'kind' => 'original', 'category' => '', 'description' => '', 'brief' => ''];
         if ($request->isMethod('POST')) {
             $form = array_map('trim', array_intersect_key($request->request->all(), $form)) + $form;
             if (!$this->isCsrfTokenValid('studio-new', (string)$request->request->get('_token'))) {
@@ -58,14 +58,14 @@ final class StudioController extends AbstractController
                     throw new ProjectException('Décrivez votre jeu en quelques phrases : c\'est ce que votre Claude lira.');
                 }
                 $project = $this->service->create($user, $form['title'], $form['slug'] ?: $slugs->available(Slugs::fromTitle($form['title'])),
-                    $category, $form['description'], $form['brief']);
+                    $category, $form['description'], $form['brief'], $form['kind']);
                 $this->addFlash('success', 'Projet créé : le dépôt GitHub se prépare.');
                 return $this->redirectToRoute('studio_project', ['slug' => $project->getSlug()]);
             } catch (ProjectException $e) {
                 $this->addFlash('error', $e->getMessage());
             }
         }
-        return $this->render('studio/new.html.twig', ['form' => $form, 'categories' => $this->categories->ordered()]);
+        return $this->render('studio/new.html.twig', ['form' => $form, 'kinds' => Project::KINDS, 'categories' => $this->categories->ordered()]);
     }
 
     #[Route('/importer', name: 'studio_import', methods: ['GET', 'POST'])]
