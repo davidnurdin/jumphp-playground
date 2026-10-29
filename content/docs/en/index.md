@@ -9,7 +9,7 @@ There are several ways to get started, from the quickest to the most complete.
 | [Sandbox](/docs/bac-a-sable) | no | a browser | try it in 1 minute: change a hello world and run it |
 | [With your Claude](/docs/avec-claude) | GitHub | Claude Code + Docker | describe your game and let it write, test and publish it |
 | [Online editor](/docs/editeur-en-ligne) | GitHub | a browser | tweak a published game, or fork someone else's |
-| [On your computer](/docs/en-local) | no (GitHub to publish) | Docker | develop like a pro: tests, screenshots, browser build |
+| [On your computer](/docs/en-local) | no (GitHub to publish) | Docker | develop like a pro: tests, screenshots, browser build. In one line: `curl -fsSL https://jumphp.net/install.sh \| sh` |
 | [Import a repository](/docs/importer) | GitHub | a JumPHP repository | publish a game that already exists |
 | [Amstrad CPC remake](/docs/remake-amstrad) | GitHub | the game's `.dsk` disk | remake a CPC game with its original graphics and music |
 | [Porting an existing game](/docs/portage) | GitHub | its source code | translate an old game (C, Pascal, BASIC…) into PHP |

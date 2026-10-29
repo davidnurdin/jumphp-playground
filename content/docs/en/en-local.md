@@ -3,6 +3,34 @@
 Everything goes through one command, `bin/jumphp`, which runs PHP, Composer, the WebAssembly compiler, the web
 server and the tests **in Docker**. All you need is Docker and git.
 
+## Install in one line
+
+**Linux, macOS, Windows with WSL** (in a terminal):
+
+```bash
+curl -fsSL https://jumphp.net/install.sh | sh
+```
+
+**Windows** (in PowerShell): JumPHP runs in WSL (Linux inside Windows); the line checks it is there (else it says
+how to install it: `wsl --install` as administrator, then a restart) and installs JumPHP in it. Docker: Docker
+Desktop, with the WSL 2 engine.
+
+```powershell
+irm https://jumphp.net/install.ps1 | iex
+```
+
+It installs the **`jumphp`** command (in `~/.local/bin`, added to the `PATH` if needed; nothing else). Then:
+
+```bash
+jumphp new my-game       # a project: the wizard checks git and Docker (and offers to install them), makes the game
+```
+
+Both at once: `curl -fsSL https://jumphp.net/install.sh | sh -s -- my-game`. The scripts can be read before
+running them: [install.sh](https://github.com/davidnurdin/jumPhp/blob/main/install.sh),
+[install.ps1](https://github.com/davidnurdin/jumPhp/blob/main/install.ps1).
+
+## Without the installer
+
 ```bash
 composer create-project jumphp/jumphp my-games   # or: git clone https://github.com/davidnurdin/jumPhp.git my-games
 cd my-games

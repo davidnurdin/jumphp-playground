@@ -92,6 +92,11 @@ final class PlaygroundTest extends WebTestCase
         self::assertResponseHeaderSame('Service-Worker-Allowed', '/');
         $this->get(self::APP, '/test-game/sw.js');
         self::assertResponseHeaderSame('Service-Worker-Allowed', '/test-game');
+        // JumPHP's installers in one line
+        $this->get(self::APP, '/install.sh');
+        self::assertResponseRedirects('https://raw.githubusercontent.com/davidnurdin/jumPhp/main/install.sh');
+        $this->get(self::APP, '/install.ps1');
+        self::assertResponseRedirects('https://raw.githubusercontent.com/davidnurdin/jumPhp/main/install.ps1');
         $this->get(self::APP, '/nope-nope');
         self::assertResponseStatusCodeSame(404);
     }

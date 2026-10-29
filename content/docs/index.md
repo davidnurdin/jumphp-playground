@@ -9,7 +9,7 @@ jeux de ce site. Il y a plusieurs façons de s'y mettre, de la plus rapide à la
 | [Bac à sable](/docs/bac-a-sable) | non | un navigateur | essayer en 1 minute : changer un hello world et le lancer |
 | [Avec votre Claude](/docs/avec-claude) | GitHub | Claude Code + Docker | décrire son jeu et le laisser l'écrire, le tester, le publier |
 | [Éditeur en ligne](/docs/editeur-en-ligne) | GitHub | un navigateur | retoucher un jeu publié, ou forker celui d'un autre |
-| [Sur votre ordinateur](/docs/en-local) | non (GitHub pour publier) | Docker | développer comme un pro : tests, captures, build navigateur |
+| [Sur votre ordinateur](/docs/en-local) | non (GitHub pour publier) | Docker | développer comme un pro : tests, captures, build navigateur. En une ligne : `curl -fsSL https://jumphp.net/install.sh \| sh` |
 | [Importer un dépôt](/docs/importer) | GitHub | un dépôt JumPHP | publier ici un jeu qui existe déjà |
 | [Remake Amstrad CPC](/docs/remake-amstrad) | GitHub | la disquette `.dsk` du jeu | refaire un jeu CPC avec ses graphismes et sa musique d'origine |
 | [Portage d'un jeu existant](/docs/portage) | GitHub | son code source | traduire un vieux jeu (C, Pascal, BASIC…) en PHP |
