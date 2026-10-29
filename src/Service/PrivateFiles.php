@@ -15,7 +15,7 @@ final class PrivateFiles
 {
     public const MAX_FILE = 20 * 1024 * 1024;
     public const MAX_TOTAL = 64 * 1024 * 1024;
-    public const MAX_COUNT = 500;
+    public const MAX_COUNT = 2000;
 
     public function __construct(private string $storageDir)
     {

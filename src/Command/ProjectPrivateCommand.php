@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Message\ShootProject;
 use App\Repository\ProjectRepository;
 use App\Service\PrivateFiles;
+use App\Service\ProjectException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -40,7 +41,12 @@ final class ProjectPrivateCommand extends Command
         foreach ($files as $file) {
             if ($file->isFile() && !$file->isLink()) {
                 $path = trim($input->getOption('as') . '/' . substr($file->getPathname(), strlen($folder) + 1), '/');
-                $output->writeln('added: ' . $this->private->add($project, $path, $file->getPathname()));
+                try {
+                    $output->writeln('added: ' . $this->private->add($project, $path, $file->getPathname()));
+                } catch (ProjectException $e) {
+                    $output->writeln('<error>' . $e->getMessage() . '</error>');
+                    return Command::FAILURE;
+                }
             }
         }
         if ($project->isPublished() && (!$project->hasThumbnail() || $project->isShotThumbnail())) {
