@@ -9,18 +9,24 @@
 	<meta name="description" content="{% block description %}{{ 'Des jeux rétro écrits en PHP avec JumPHP, gratuits et jouables tout de suite dans le navigateur. Créez le vôtre en le décrivant à votre Claude.'|trans }}{% endblock %}">
 	{% set page_url = app_url|trim('/', 'right') ~ app.request.pathInfo %}
 	{% block canonical %}<link rel="canonical" href="{{ page_url ~ (lang == 'en' ? '?lang=en') }}">{% endblock %}
-	<link rel="alternate" hreflang="fr" href="{{ page_url }}?lang=fr">
+	{# the page in both languages (the address without ?lang is the French one for search engines), not on the pages kept out of them #}
+	{% if 'noindex' not in (block('head') ~ '') %}
+	<link rel="alternate" hreflang="fr" href="{{ page_url }}">
 	<link rel="alternate" hreflang="en" href="{{ page_url }}?lang=en">
 	<link rel="alternate" hreflang="x-default" href="{{ page_url }}">
+	{% endif %}
 	<meta name="theme-color" content="#0b0e1f">
 	<link rel="icon" type="image/png" href="/favicon.png">
 	<meta property="og:site_name" content="JumPHP playground">
 	<meta property="og:locale" content="{{ lang == 'en' ? 'en_US' : 'fr_FR' }}">
+	<meta property="og:locale:alternate" content="{{ lang == 'en' ? 'fr_FR' : 'en_US' }}">
 	<meta property="og:type" content="{% block og_type %}website{% endblock %}">
 	<meta property="og:title" content="{{ page_title ?: 'JumPHP playground' }}">
 	<meta property="og:description" content="{{ block('description')|trim }}">
-	<meta property="og:url" content="{{ page_url }}">
+	<meta property="og:url" content="{{ page_url ~ (lang == 'en' ? '?lang=en') }}">
 	<meta property="og:image" content="{% block og_image %}{{ app_url|trim('/', 'right') }}/og.png{% endblock %}">
+	{% block og_image_size %}<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">{% endblock %}
+	<meta property="og:image:alt" content="{{ page_title ?: 'JumPHP playground' }}">
 	<meta name="twitter:card" content="summary_large_image">
 	{% block head %}{% endblock %}
 	{% block pwa %}{% endblock %}

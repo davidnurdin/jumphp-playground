@@ -1,4 +1,6 @@
 {% extends 'base.html.twig' %}
+{% block og_image %}{% if project.site and project.site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ project.site.image }}{% elseif project.hasThumbnail %}{{ url('game_share', {slug: project.slug, sha: project.publishedSha|slice(0, 12), lang: app.request.locale}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
+{% block og_image_size %}{% if not (project.site and project.site.image) %}{{ parent() }}{% endif %}{% endblock %}
 {% block title %}{{ 'Jouer à %title%'|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
 {% block description %}{{ project.descriptionIn(app.request.locale) ?: project.title }}{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ url('game', {slug: project.slug}) }}">{% endblock %}

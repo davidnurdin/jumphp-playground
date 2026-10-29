@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-	<url><loc>{{ url('home') }}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-	<url><loc>{{ url('categories') }}</loc><changefreq>weekly</changefreq></url>
+{# every page in both languages: the address without ?lang (French for search engines) and ?lang=en #}
+{% macro languages(url) %}<xhtml:link rel="alternate" hreflang="fr" href="{{ url }}"/><xhtml:link rel="alternate" hreflang="en" href="{{ url }}?lang=en"/><xhtml:link rel="alternate" hreflang="x-default" href="{{ url }}"/>{% endmacro %}
+{% macro page(url, extra = '') %}{% for suffix in ['', '?lang=en'] %}
+	<url><loc>{{ url ~ suffix }}</loc>{{ extra|raw }}{{ _self.languages(url) }}</url>
+{% endfor %}{% endmacro %}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+{{ _self.page(url('home'), '<changefreq>daily</changefreq><priority>1.0</priority>') }}
+{{ _self.page(url('games'), '<changefreq>daily</changefreq>') }}
+{{ _self.page(url('categories'), '<changefreq>weekly</changefreq>') }}
 {% for category in categories %}
-	<url><loc>{{ url('category', {slug: category.slug}) }}</loc><changefreq>daily</changefreq></url>
+{{ _self.page(url('category', {slug: category.slug}), '<changefreq>daily</changefreq>') }}
 {% endfor %}
 {% for game in games %}
-	<url>
-		<loc>{{ url('game', {slug: game.slug}) }}</loc>
-		<lastmod>{{ game.publishedAt|date('Y-m-d') }}</lastmod>
-		<priority>0.8</priority>
-		{% if game.hasThumbnail %}<image:image><image:loc>{{ url('game_thumb', {slug: game.slug, sha: game.publishedSha|slice(0, 12)}) }}</image:loc></image:image>{% endif %}
-	</url>
+{% set extra %}<lastmod>{{ game.publishedAt|date('Y-m-d') }}</lastmod><priority>0.8</priority>{% if game.hasThumbnail %}<image:image><image:loc>{{ url('game_thumb', {slug: game.slug, sha: game.publishedSha|slice(0, 12)}) }}</image:loc></image:image>{% endif %}{% endset %}
+{{ _self.page(url('game', {slug: game.slug}), extra) }}
+{% endfor %}
+{% for page in docs %}
+{{ _self.page(page == 'index' ? url('docs') : url('docs_page', {page: page}), '<changefreq>weekly</changefreq>') }}
 {% endfor %}
 </urlset>

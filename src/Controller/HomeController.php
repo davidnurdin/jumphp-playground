@@ -107,6 +107,7 @@ final class HomeController extends AbstractController
         $response = $this->render('home/sitemap.xml.twig', [
             'games' => $this->projects->latest(5000),
             'categories' => $this->categories->ordered(),
+            'docs' => array_merge(...array_values(array_map(array_keys(...), DocsController::PAGES))),
         ]);
         $response->headers->set('Content-Type', 'application/xml; charset=utf-8');
         return $response;

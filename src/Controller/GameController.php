@@ -12,6 +12,7 @@ use App\Security\TokenCipher;
 use App\Service\GameFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
+use App\Service\ShareCard;
 use App\Service\Slugs;
 use App\Service\Voters;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -52,6 +53,21 @@ final class GameController extends AbstractController
         $response = new BinaryFileResponse($file);
         $response->headers->set('Content-Type', 'image/png');
         $response->headers->set('Cache-Control', 'public, max-age=31536000, immutable');
+        return $response;
+    }
+
+    /** the picture of the game when it is shared (og:image), in a language (its category's name) */
+    #[Route('/media/share/{slug}-{sha}-{lang}.png', name: 'game_share', requirements: ['slug' => self::SLUG, 'sha' => '[0-9a-f]{7,40}', 'lang' => 'fr|en'], methods: ['GET'])]
+    public function share(string $slug, string $lang, ShareCard $cards, TranslatorInterface $translator): Response
+    {
+        $project = $this->projects->findOneBy(['slug' => $slug]);
+        $file = $project ? $cards->file($project, $translator->trans($project->getCategory()->getName(), [], null, $lang), $lang) : null;
+        if (!$file) {
+            throw new NotFoundHttpException();
+        }
+        $response = new BinaryFileResponse($file);
+        $response->headers->set('Content-Type', 'image/png');
+        $response->headers->set('Cache-Control', 'public, max-age=86400');
         return $response;
     }
 

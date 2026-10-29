@@ -1,9 +1,13 @@
 {% extends 'base.html.twig' %}
 {% set site = project.site %}
-{% block title %}{{ site and site.title ? site.title : '%title% – jeu gratuit en ligne (%category%)'|trans({'%title%': project.title, '%category%': project.category.name|trans|lower}) }}{% endblock %}
-{% block description %}{{ project.hasDescriptionIn(app.request.locale) ? project.descriptionIn(app.request.locale) : site and site.description ? site.description : (project.description ?: '%title%, un jeu écrit en PHP avec JumPHP, à jouer gratuitement dans le navigateur.'|trans({'%title%': project.title})) }}{% endblock %}
+{# the game's own site speaks one language: its title and description only in it #}
+{% set site_speaks = site and (site.lang ?? '') ? site.lang|slice(0, 2) == app.request.locale : app.request.locale == 'fr' %}
+{% block title %}{{ site and site.title and site_speaks ? site.title : '%title% – jeu gratuit en ligne (%category%)'|trans({'%title%': project.title, '%category%': project.category.name|trans|lower}) }}{% endblock %}
+{% block description %}{{ project.hasDescriptionIn(app.request.locale) ? project.descriptionIn(app.request.locale) : site and site.description and site_speaks ? site.description : (project.description ?: '%title%, un jeu écrit en PHP avec JumPHP, à jouer gratuitement dans le navigateur.'|trans({'%title%': project.title})) }}{% endblock %}
 {% block og_type %}video.game{% endblock %}
-{% block og_image %}{% if site and site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ site.image }}{% elseif project.hasThumbnail %}{{ url('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
+{# shared: the picture the game's site made for it, else a card made from its picture (1200 x 630, App\Service\ShareCard) #}
+{% block og_image %}{% if site and site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ site.image }}{% elseif project.hasThumbnail %}{{ url('game_share', {slug: project.slug, sha: project.publishedSha|slice(0, 12), lang: app.request.locale}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
+{% block og_image_size %}{% if not (site and site.image) %}{{ parent() }}{% endif %}{% endblock %}
 {% block head %}{% if project.publishedSha %}{% include 'game/_jsonld.html.twig' %}{% endif %}{% if not project.listed %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
 {% block pwa %}{% include 'game/_pwa_head.html.twig' %}{% endblock %}
 {% block body_class %}{{ frame ? 'full' }}{% endblock %}
