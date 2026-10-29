@@ -26,6 +26,11 @@ Ce qu'il montre :
 - **Les vérifications en direct** : quand Claude lance `bin/jumphp test`, la sortie défile dans le panneau et
   chaque étape est cochée au fur et à mesure : `✔ php -l   ✔ phpstan   … phpunit   smoke test`. À la fin : le
   résumé de PHPUnit et ce qui a échoué (les tests en échec, les avertissements et erreurs PHP).
+- **L'écran du jeu en direct** (`● live`) : pendant que `bin/jumphp test` (son smoke test) ou `bin/jumphp shot`
+  fait tourner le jeu, le panneau montre son écran au fil des frames (le moteur réécrit `var/live/frame.png`,
+  option `JUMPHP_LIVE`). Les runs sans fenêtre vont plus vite que le temps réel : `JUMPHP_REALTIME=1` les ralentit
+  à la vitesse du jeu. Un projet créé avant cette option la récupère avec `git pull jumphp main` (le dépôt JumPHP
+  d'origine, gardé sous le nom `jumphp`).
 - **Les écrans** : la capture que `bin/jumphp shot` ou `siteshot` vient de faire, et chaque image que Claude ouvre
   pour regarder le jeu, affichées dans le panneau (terminaux kitty, Ghostty, iTerm2 ; ailleurs, le chemin du
   fichier).
@@ -43,5 +48,5 @@ Ce que vous pouvez faire :
 ## Comment il suit Claude
 
 Une commande Bash de Claude qui lance `bin/jumphp test`, `shot`, `siteshot` ou `webshot` est exécutée telle quelle,
-sa sortie étant aussi copiée dans un fichier temporaire que le panneau suit (`{ commande } 2>&1 | tee …`, le code de
+sa sortie étant aussi copiée dans un fichier temporaire que le panneau suit (`{ export JUMPHP_LIVE=1; commande } 2>&1 | tee …`, le code de
 sortie gardé). Les autres commandes ne sont pas touchées. Rien n'est envoyé ailleurs.

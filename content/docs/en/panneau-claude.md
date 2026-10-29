@@ -26,6 +26,11 @@ What it shows:
 - **The checks, live**: when Claude runs `bin/jumphp test`, the output scrolls in the pane and each step is ticked
   as it goes: `✔ php -l   ✔ phpstan   … phpunit   smoke test`. At the end: PHPUnit's summary and what failed (the
   failing tests, PHP warnings and errors).
+- **The game's screen, live** (`● live`): while `bin/jumphp test` (its smoke test) or `bin/jumphp shot` runs the
+  game, the pane shows its screen frame after frame (the engine rewrites `var/live/frame.png`, option
+  `JUMPHP_LIVE`). Runs without a window go faster than real time: `JUMPHP_REALTIME=1` slows them to the game's
+  speed. A project made before this option gets it with `git pull jumphp main` (the original JumPHP repository,
+  kept under the name `jumphp`).
 - **The screens**: the screenshot `bin/jumphp shot` or `siteshot` just made, and every picture Claude opens to look
   at the game, drawn in the pane (kitty, Ghostty, iTerm2 terminals; elsewhere, the file's path).
 - **The playground**: the result of the [site's PHPUnit tests](/docs/tests) (`run_tests`, `get_test_run`) and of
@@ -42,5 +47,5 @@ What you can do:
 ## How it follows Claude
 
 A Bash command of Claude's that runs `bin/jumphp test`, `shot`, `siteshot` or `webshot` runs as written, its output
-also copied to a temporary file the pane follows (`{ command } 2>&1 | tee …`, the exit status kept). Other commands
+also copied to a temporary file the pane follows (`{ export JUMPHP_LIVE=1; command } 2>&1 | tee …`, the exit status kept). Other commands
 are not touched. Nothing is sent anywhere.
