@@ -31,7 +31,7 @@ final class PlaygroundTest extends WebTestCase
         $container = static::getContainer();
         $this->em = $container->get(EntityManagerInterface::class);
         $connection = $this->em->getConnection();
-        foreach (['rating', 'draft', 'project', 'app_user'] as $table) {
+        foreach (['comment', 'note', 'todo', 'rating', 'draft', 'project', 'app_user'] as $table) {
             $connection->executeStatement("DELETE FROM $table");
         }
         $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => 'arcade']);
@@ -233,6 +233,117 @@ final class PlaygroundTest extends WebTestCase
         self::assertSelectorExists('.wall-top a.logo[href="/"]');
         $this->get(self::APP, '/jeux');
         self::assertResponseRedirects('/games', 301);
+    }
+
+    public function testCommentsIdeasIssuesAndProfiles(): void
+    {
+        $post = function (string $path, array $fields, string $origin = 'http://jumphp.test'): void {
+            $this->client->request('POST', 'http://' . self::APP . $path, $fields, [], ['HTTP_ORIGIN' => $origin]);
+        };
+        // an anonymous comment waits: its writer sees it, not another visitor
+        $post('/test-game/commentaires', ['body' => 'Super jeu !', 'name' => 'Zoé', 'from' => 'page']);
+        self::assertResponseRedirects('/test-game#retours');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.comment.pending', 'Super jeu !');
+        $this->client->getCookieJar()->clear();
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorNotExists('.comment');
+        // the same for the idea box and issues, on their own pages
+        $post('/test-game/idees', ['body' => 'Un mode deux joueurs', 'from' => 'list']);
+        self::assertResponseRedirects('/test-game/idees#retours');
+        $post('/test-game/problemes', ['body' => 'Le son coupe au niveau 2']);
+        self::assertResponseRedirects('/test-game?retours=problemes#retours');
+        $this->client->getCookieJar()->clear();
+        $this->get(self::APP, '/test-game/idees');
+        self::assertSelectorNotExists('.comment');
+        // robots, other sites, empty or too long messages
+        $post('/test-game/commentaires', ['body' => 'spam', 'website' => 'http://spam.example']);
+        $post('/test-game/commentaires', ['body' => 'hi'], 'https://elsewhere.example');
+        self::assertResponseStatusCodeSame(403);
+        $post('/test-game/commentaires', ['body' => '  ']);
+        self::assertResponseStatusCodeSame(422);
+        $post('/test-game/commentaires', ['body' => str_repeat('a', 2001)]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(3, (int)$this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM comment'));
+
+        // the owner sees them all, approves the comment and the issue, resolves the issue
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorTextContains('.comment.pending', 'Super jeu !');
+        $form = $this->client->getCrawler()->filter('.comment form')->first()->form();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/test-game#retours');
+        $this->get(self::APP, '/test-game/problemes');
+        $this->client->submit($this->client->getCrawler()->selectButton('✓ Valider')->form());
+        $this->get(self::APP, '/test-game/problemes');
+        $this->client->submit($this->client->getCrawler()->selectButton('Marquer résolu')->form());
+        // a signed-in user's comment is shown at once, with their picture and a link to their profile
+        $other = new User(1002, 'Player2');
+        $other->setAvatarUrl('https://avatars.githubusercontent.com/u/1002?v=4');
+        $this->em->persist($other);
+        $this->em->flush();
+        $this->client->loginUser($other);
+        $post('/test-game/commentaires', ['body' => 'Bravo']);
+        $this->client->getCookieJar()->clear();
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorCount(2, '.comment');
+        self::assertSelectorExists('.comment a.avatar[href="/dev/Player2"] img');
+        self::assertSelectorNotExists('.comment.pending');
+        self::assertSelectorTextContains('.tabs a.on', '2');
+        $this->get(self::APP, '/test-game/problemes');
+        self::assertSelectorTextContains('.comment', 'résolu');
+        $this->get(self::APP, '/test-game/idees');
+        self::assertSelectorNotExists('.comment');
+        // another user cannot remove a comment that is not theirs
+        $this->client->loginUser($other);
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorCount(1, '.comment form');
+
+        // the developers' pages
+        $this->get(self::APP, '/dev/tester');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'tester');
+        self::assertSelectorExists('a.card[href="/test-game"]');
+        self::assertSelectorTextContains('.two', 'Bravo');
+        $this->get(self::APP, '/dev/player2');
+        self::assertResponseRedirects('/dev/Player2', 301);
+        $this->get(self::APP, '/dev/nobody');
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testMcpNotesAndTodos(): void
+    {
+        $tool = function (string $name, array $arguments): array {
+            $this->client->request('POST', 'http://' . self::APP . '/mcp', [], [], [
+                'HTTP_AUTHORIZATION' => 'Bearer jph_test', 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json, text/event-stream',
+            ], json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => $name, 'arguments' => $arguments]]));
+            return json_decode((string)$this->client->getResponse()->getContent(), true)['result'];
+        };
+        $tool('save_note', ['slug' => 'test-game', 'content' => "# State\nlevel 1 done"]);
+        $tool('save_note', ['slug' => 'test-game', 'content' => 'level 2 started', 'append' => true]);
+        $tool('save_note', ['slug' => 'test-game', 'name' => 'ideas', 'content' => 'a boss']);
+        $notes = $tool('get_notes', ['slug' => 'test-game'])['structuredContent'];
+        self::assertSame("# State\nlevel 1 done\n\nlevel 2 started", $notes['content']);
+        self::assertSame(['ideas', 'progress'], array_column($notes['notes'], 'name'));
+        self::assertSame('a boss', $tool('get_notes', ['slug' => 'test-game', 'name' => 'ideas'])['structuredContent']['content']);
+
+        $todos = $tool('add_todos', ['slug' => 'test-game', 'items' => ['sound', 'menu', 'boss']])['structuredContent']['todos'];
+        [$sound, $menu, $boss] = array_column($todos, 'id');
+        $left = $tool('update_todos', ['slug' => 'test-game', 'done' => [$sound], 'remove' => [$boss], 'text' => [(string)$menu => 'pause menu']])['structuredContent'];
+        self::assertSame([['id' => $menu, 'text' => 'pause menu', 'done' => false]], $left['todos']);
+        self::assertSame(2, count($tool('list_todos', ['slug' => 'test-game', 'all' => true])['structuredContent']['todos']));
+
+        // private: the studio shows them to the owner only, and players' feedback is there for their Claude
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/studio/projet/test-game');
+        self::assertSelectorTextContains('.todo-list', 'pause menu');
+        self::assertSelectorTextContains('details.note[open]', 'level 2 started');
+        $this->client->request('POST', 'http://' . self::APP . '/test-game/problemes', ['body' => 'crash'], [], ['HTTP_ORIGIN' => 'http://jumphp.test']);
+        $issue = $tool('list_feedback', ['slug' => 'test-game'])['structuredContent']['issue'][0];
+        self::assertSame(['crash', true], [$issue['text'], $issue['approved']]);
+        $tool('moderate_feedback', ['slug' => 'test-game', 'id' => $issue['id'], 'action' => 'resolve']);
+        self::assertTrue($tool('list_feedback', ['slug' => 'test-game', 'section' => 'issue'])['structuredContent']['issue'][0]['resolved']);
+        self::assertTrue($tool('get_notes', ['slug' => 'nope'])['isError']);
     }
 
     public function testPrivateFiles(): void

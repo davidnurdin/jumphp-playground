@@ -115,6 +115,21 @@ class ProjectRepository extends ServiceEntityRepository
             ->orderBy('p.publishedAt', 'DESC')->getQuery()->getResult();
     }
 
+    /** its approved comments, ideas and issues, counted again (after one is added, approved or removed) */
+    public function countComments(Project $project): void
+    {
+        $em = $this->getEntityManager();
+        $em->getConnection()->executeStatement(
+            'UPDATE project p SET
+                p.comment_count = (SELECT COUNT(*) FROM comment m WHERE m.project_id = p.id AND m.approved = 1 AND m.kind = \'comment\'),
+                p.idea_count = (SELECT COUNT(*) FROM comment m WHERE m.project_id = p.id AND m.approved = 1 AND m.kind = \'idea\'),
+                p.issue_count = (SELECT COUNT(*) FROM comment m WHERE m.project_id = p.id AND m.approved = 1 AND m.kind = \'issue\')
+                WHERE p.id = ?',
+            [$project->getId()],
+        );
+        $em->refresh($project);
+    }
+
     public function addPlay(Project $project): void
     {
         $this->getEntityManager()->createQuery('UPDATE App\Entity\Project p SET p.plays = p.plays + 1 WHERE p.id = :id')

@@ -2,9 +2,11 @@
 
 namespace App\Controller;
 
+use App\Entity\Comment;
 use App\Entity\Project;
 use App\Entity\User;
 use App\GitHub\GitHub;
+use App\Repository\CommentRepository;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\RatingRepository;
@@ -72,11 +74,16 @@ final class GameController extends AbstractController
     }
 
     #[Route('/{slug}', name: 'game', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -10)]
-    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs, Request $request, RatingRepository $ratings, Voters $voters): Response
+    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs, Request $request, RatingRepository $ratings, Voters $voters, CommentRepository $comments): Response
     {
         $project = $this->visible($slug, $user);
+        // the section of the players' messages shown under the game (?retours=idees|problemes)
+        $section = (string)$request->query->get('retours');
+        $section = isset(Comment::SECTIONS[$section]) ? $section : 'commentaires';
         return $this->render('game/show.html.twig', [
             'project' => $project,
+            'section' => $section,
+            'comments' => $project->isPublished() && !$project->hasSite() ? $comments->shownTo($project, Comment::SECTIONS[$section], $user, $voters->of($request, null)) : [],
             'my_rating' => $ratings->scoreOf($project, $voters->of($request, $user)),
             'fork_slug' => $user && !$project->isOwnedBy($user) ? $slugs->available(Slugs::fromTitle($project->getSlug() . '-' . $user->getLogin())) : null,
             'frame' => $project->hasSite() ? $this->play($project) . '/' : null,

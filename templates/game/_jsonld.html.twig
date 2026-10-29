@@ -13,7 +13,7 @@
 	'operatingSystem': 'Tout navigateur récent'|trans,
 	'isAccessibleForFree': true,
 	'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},
-	'author': {'@type': 'Person', 'name': project.owner.displayName, 'url': 'https://github.com/' ~ project.owner.login},
+	'author': {'@type': 'Person', 'name': project.owner.displayName, 'url': url('profile', {login: project.owner.login})},
 	'codeRepository': project.repoUrl,
 	'datePublished': project.publishedAt ? project.publishedAt|date('Y-m-d') : null,
 	'potentialAction': {'@type': 'PlayAction', 'target': url('game_play', {slug: project.slug})},

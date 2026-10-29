@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+{% set heading = {commentaires: 'Commentaires sur %title%', idees: 'Idées pour %title%', problemes: 'Problèmes signalés sur %title%'}[section] %}
+{% block title %}{{ heading|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
+{% block description %}{{ 'Ce que les joueurs pensent de %title%, un jeu rétro en PHP jouable dans le navigateur.'|trans({'%title%': project.title}) }}{% endblock %}
+{% block head %}{% if not project.listed or not project.feedbackCounts[section] %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'comments'} %}
+<div class="wrap section">
+	<h2 class="sr-only">{{ heading|trans({'%title%': project.title}) }}</h2>
+	{% include 'game/_comments.html.twig' with {from: 'list'} %}
+</div>
+{% endblock %}

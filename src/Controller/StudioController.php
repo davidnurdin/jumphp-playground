@@ -6,7 +6,10 @@ use App\Entity\Project;
 use App\Entity\User;
 use App\Message\ShootProject;
 use App\Repository\CategoryRepository;
+use App\Repository\CommentRepository;
+use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\TodoRepository;
 use App\Service\PrivateFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
@@ -40,9 +43,9 @@ final class StudioController extends AbstractController
     }
 
     #[Route('', name: 'studio', methods: ['GET'])]
-    public function index(#[CurrentUser] User $user): Response
+    public function index(#[CurrentUser] User $user, CommentRepository $comments): Response
     {
-        return $this->render('studio/index.html.twig', ['projects' => $this->projects->ownedBy($user)]);
+        return $this->render('studio/index.html.twig', ['projects' => $this->projects->ownedBy($user), 'pending' => $comments->pendingByProject($user)]);
     }
 
     #[Route('/nouveau', name: 'studio_new', methods: ['GET', 'POST'])]
@@ -92,7 +95,7 @@ final class StudioController extends AbstractController
     }
 
     #[Route('/projet/{slug}', name: 'studio_project', methods: ['GET', 'POST'])]
-    public function project(string $slug, Request $request, #[CurrentUser] User $user): Response
+    public function project(string $slug, Request $request, #[CurrentUser] User $user, CommentRepository $comments, NoteRepository $notes, TodoRepository $todos): Response
     {
         $project = $this->owned($slug, $user);
         if ($request->isMethod('POST')) {
@@ -116,6 +119,9 @@ final class StudioController extends AbstractController
         return $this->render('studio/project.html.twig', [
             'project' => $project,
             'private' => $this->private->index($project),
+            'pending' => $comments->pendingByProject($user)[$project->getId()] ?? 0,
+            'notes' => $notes->findBy(['project' => $project], ['name' => 'ASC']),
+            'todos' => $todos->findBy(['project' => $project], ['done' => 'ASC', 'id' => 'ASC']),
             'categories' => $this->categories->ordered(),
             'mcp_url' => rtrim($this->appUrl, '/') . '/mcp',
         ]);

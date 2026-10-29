@@ -11,13 +11,18 @@ navigateur.
   aperçu du jeu avec les brouillons, push sur GitHub en un commit, ou fork.
 - **Connexion GitHub uniquement**. Un projet = un dépôt GitHub public de l'utilisateur (un projet JumPHP avec un
   jeu), publié à chaque push (webhook) ; catégorie choisie à la création.
+- **Avis des joueurs** sur chaque jeu : commentaires, boîte à idées, problèmes. Tout le monde peut écrire ; un
+  message anonyme n'est visible (de tous) qu'une fois validé par l'auteur du jeu, celui d'un connecté paraît tout
+  de suite avec sa photo et un lien vers son profil.
+- **Pages développeur** (`/dev/<login>`) : ses jeux, ses chiffres, les derniers messages écrits et reçus.
 - **Bac à sable** (`/bac-a-sable`) : l'éditeur sans compte, sur hello-world ou n'importe quel jeu (brouillons
   liés à un cookie signé, gardés 30 jours, pas de push).
 - **Documentation et tutoriels** (`/docs`, `content/docs/*.md`).
 - **API publique** en lecture seule (API Platform, `/api/games`, `/api/categories`, OpenAPI sur `/api/docs`,
   CORS ouvert) : `src/ApiResource`, `src/State`.
 - **Serveur MCP** (`/mcp`, jeton fait dans `/studio/mcp`) : le Claude local de l'utilisateur crée le projet,
-  clone le dépôt, fait le jeu et son site, pousse et publie (`AGENTS.md` §14 de JumPHP).
+  clone le dépôt, fait le jeu et son site, pousse et publie (`AGENTS.md` §14 de JumPHP) ; il garde des notes et
+  une todo list privées par projet (état d'avancement, aussi visibles dans le studio) et lit / modère les avis.
 
 Symfony 7.4, FrankenPHP, MariaDB, Messenger (création des dépôts et publications en tâche de fond).
 

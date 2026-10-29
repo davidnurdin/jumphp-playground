@@ -1,0 +1,74 @@
+{# what the players say about a game, in three tabs: comments, the idea box, issues (CommentController);
+   section: the tab shown; from: where the forms come back to (page: the game's page, list: the section's page) #}
+{% set owner = project.isOwnedBy(app.user) %}
+{% set form = comment_form ?? null %}
+{% set labels = {
+	commentaires: {tab: 'Commentaires', icon: '💬', field: 'Votre commentaire', button: 'Publier', empty: 'Pas encore de commentaire : soyez le premier !'},
+	idees: {tab: 'Boîte à idées', icon: '💡', field: 'Votre idée pour ce jeu', button: 'Proposer', empty: 'Pas encore d\'idée : proposez la vôtre !'},
+	problemes: {tab: 'Problèmes', icon: '🐞', field: 'Le problème : ce que vous faisiez, ce qui s\'est passé, votre navigateur', button: 'Signaler', empty: 'Aucun problème signalé.'},
+} %}
+{% set label = labels[section] %}
+{% set counts = project.feedbackCounts %}
+<section class="comments" id="retours">
+	<nav class="tabs" aria-label="{{ 'Avis des joueurs'|trans }}">
+		{% for key, l in labels %}
+			{% set href = from == 'list' ? path('game_comments', {slug: project.slug, section: key}) : path('game', {slug: project.slug} + (key != 'commentaires' ? {retours: key} : {})) %}
+			<a href="{{ href }}#retours" class="{{ key == section ? 'on' }}"{{ key == section ? ' aria-current="page"' }}>{{ l.icon }} {{ l.tab|trans }}{% if counts[key] %} <small>{{ counts[key] }}</small>{% endif %}</a>
+		{% endfor %}
+	</nav>
+	<form class="panel comment-form" method="post" action="{{ path('game_comment_add', {slug: project.slug, section: section}) }}">
+		<input type="hidden" name="from" value="{{ from }}">
+		{# a field people do not see: a robot fills it #}
+		<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>
+		{% if comment_error ?? null %}<div class="flash error" role="alert">{{ comment_error.message|trans(comment_error.params) }}</div>{% endif %}
+		{% if app.user %}
+			<div class="who">{% if app.user.avatarUrl %}<img src="{{ app.user.avatarUrl }}&s=80" alt="" width="36" height="36">{% endif %}<b>{{ app.user.displayName }}</b></div>
+		{% else %}
+			<div class="field"><label for="comment-name">{{ 'Votre nom'|trans }} <span class="faint">({{ 'facultatif'|trans }})</span></label><input id="comment-name" name="name" maxlength="{{ constant('App\\Entity\\Comment::MAX_NAME') }}" value="{{ form.name ?? '' }}" placeholder="{{ 'Anonyme'|trans }}" autocomplete="nickname"></div>
+		{% endif %}
+		<div class="field"><label for="comment-body">{{ label.field|trans }}</label><textarea id="comment-body" name="body" rows="4" maxlength="{{ constant('App\\Entity\\Comment::MAX_LENGTH') }}" required>{{ form.body ?? '' }}</textarea>
+			{% if not app.user %}<div class="hint">{{ 'Sans compte, votre message s\'affichera quand l\'auteur du jeu l\'aura validé. <a href="%url%">Connectez-vous avec GitHub</a> pour qu\'il paraisse tout de suite, avec votre photo.'|trans({'%url%': path('connect_github')|e})|raw }}</div>{% endif %}
+		</div>
+		<button class="btn primary" type="submit">{{ label.button|trans }}</button>
+	</form>
+	{% if comments %}
+		<ol class="comment-list">
+			{% for comment in comments %}
+				<li class="comment{{ comment.approved ? '' : ' pending' }}{{ comment.resolved ? ' resolved' }}" id="commentaire-{{ comment.id }}">
+					{% if comment.author %}
+						<a class="avatar" href="{{ path('profile', {login: comment.author.login}) }}" tabindex="-1">{% if comment.author.avatarUrl %}<img src="{{ comment.author.avatarUrl }}&s=80" alt="" width="40" height="40" loading="lazy">{% else %}<span>{{ comment.author.login|first|upper }}</span>{% endif %}</a>
+					{% else %}
+						<span class="avatar anon" aria-hidden="true"><span>?</span></span>
+					{% endif %}
+					<div class="comment-body">
+						<div class="comment-head">
+							{% if comment.author %}
+								<a href="{{ path('profile', {login: comment.author.login}) }}"><b>{{ comment.author.displayName }}</b></a>
+								{% if comment.author.id == project.owner.id %}<span class="badge">{{ 'auteur du jeu'|trans }}</span>{% endif %}
+							{% else %}
+								<b>{{ comment.name ?: 'Anonyme'|trans }}</b> <span class="faint">({{ 'non connecté'|trans }})</span>
+							{% endif %}
+							<time class="faint" datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|date(app.request.locale == 'en' ? 'm/d/Y H:i' : 'd/m/Y H:i') }}</time>
+							{% if not comment.approved %}<span class="badge creating">{{ owner ? 'à valider'|trans : 'en attente de validation'|trans }}</span>{% endif %}
+							{% if comment.issue %}<span class="badge {{ comment.resolved ? 'ready' }}">{{ comment.resolved ? 'résolu'|trans : 'ouvert'|trans }}</span>{% endif %}
+						</div>
+						<p>{{ comment.body|nl2br }}</p>
+						{% if owner or comment.canBeRemovedBy(app.user) %}
+							<div class="actions">
+								{% if owner and not comment.approved %}
+									<form method="post" action="{{ path('game_comment_approve', {slug: project.slug, id: comment.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ comment.id) }}"><input type="hidden" name="from" value="{{ from }}"><button class="btn small" type="submit">✓ {{ 'Valider'|trans }}</button></form>
+								{% endif %}
+								{% if owner and comment.issue %}
+									<form method="post" action="{{ path('game_comment_resolve', {slug: project.slug, id: comment.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ comment.id) }}"><input type="hidden" name="from" value="{{ from }}"><button class="btn small" type="submit">{{ comment.resolved ? 'Rouvrir'|trans : 'Marquer résolu'|trans }}</button></form>
+								{% endif %}
+								<form method="post" action="{{ path('game_comment_remove', {slug: project.slug, id: comment.id}) }}" onsubmit="return confirm({{ 'Supprimer ce message ?'|trans|json_encode }})"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ comment.id) }}"><input type="hidden" name="from" value="{{ from }}"><button class="btn small danger" type="submit">{{ 'Supprimer'|trans }}</button></form>
+							</div>
+						{% endif %}
+					</div>
+				</li>
+			{% endfor %}
+		</ol>
+	{% else %}
+		<p class="muted">{{ label.empty|trans }}</p>
+	{% endif %}
+</section>

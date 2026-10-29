@@ -2,10 +2,16 @@
 
 namespace App\Mcp;
 
+use App\Entity\Comment;
+use App\Entity\Note;
 use App\Entity\Project;
+use App\Entity\Todo;
 use App\Entity\User;
 use App\Repository\CategoryRepository;
+use App\Repository\CommentRepository;
+use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\TodoRepository;
 use App\Message\ShootProject;
 use App\Service\GameFiles;
 use App\Service\PrivateFiles;
@@ -35,6 +41,9 @@ final class McpTools
         private Slugs $slugs,
         private EntityManagerInterface $em,
         private MessageBusInterface $bus,
+        private NoteRepository $notes,
+        private TodoRepository $todos,
+        private CommentRepository $comments,
         private string $appUrl,
     ) {
     }
@@ -63,6 +72,13 @@ Files the game needs that may not be public (the data or sounds of an original g
 send them as private files (upload_private_files gives a URL to send them to with curl); the game loads them
 like its own files, no repository, source page or fork holds them.
 Never put the MCP token or any secret in the repository.
+
+Private memory of a project (only its owner sees it, never published): notes and a todo list. At the start of a
+session on a project, get_notes and list_todos to know where it stands; while working, add_todos for what is left
+and update_todos when something is done; at the end, save_note (name "progress") with where the game stands, what
+was decided and what comes next, so the next session (or another computer) picks it up.
+The players' comments, ideas (the idea box) and issues on the game: list_feedback; the owner approves the
+anonymous ones (moderate_feedback), and marks an issue resolved once its fix is published.
 TXT;
     }
 
@@ -103,6 +119,41 @@ TXT;
                 'paths' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'paths in the game folder'],
                 'all' => ['type' => 'boolean', 'description' => 'true: remove every private file'],
             ], ['slug']),
+            $this->tool('save_note', 'Save a private note of a project (only its owner sees it): where the game stands, decisions, what is next. Replaces the note of that name, or appends to it. At most ' . Note::MAX_COUNT . ' notes of ' . intdiv(Note::MAX_SIZE, 1000) . ' KB per project.', [
+                'slug' => $slug,
+                'name' => ['type' => 'string', 'description' => 'the note\'s name (default "' . Note::DEFAULT . '": the state of the project)'],
+                'content' => ['type' => 'string', 'description' => 'the text (Markdown)'],
+                'append' => ['type' => 'boolean', 'description' => 'true: add to the end of the note instead of replacing it'],
+            ], ['slug', 'content']),
+            $this->tool('get_notes', 'A project\'s private notes: with a name, that note\'s text; without, the "' . Note::DEFAULT . '" note\'s text and the names of the others.', [
+                'slug' => $slug,
+                'name' => ['type' => 'string'],
+            ], ['slug'], true),
+            $this->tool('delete_note', 'Delete a private note of a project.', ['slug' => $slug, 'name' => ['type' => 'string']], ['slug', 'name']),
+            $this->tool('add_todos', 'Add tasks to a project\'s private todo list.', [
+                'slug' => $slug,
+                'items' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'the tasks, ' . Todo::MAX_TEXT . ' characters at most each'],
+            ], ['slug', 'items']),
+            $this->tool('list_todos', 'A project\'s private todo list: the tasks left (id, text), and the ones done with all=true.', [
+                'slug' => $slug,
+                'all' => ['type' => 'boolean', 'description' => 'true: the tasks done too'],
+            ], ['slug'], true),
+            $this->tool('update_todos', 'Check tasks done (or not), change their text, remove them (ids from list_todos).', [
+                'slug' => $slug,
+                'done' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'ids of the tasks done'],
+                'undone' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'ids of tasks to do again'],
+                'remove' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'ids of tasks to delete'],
+                'text' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'description' => 'new texts: {"<id>": "text"}'],
+            ], ['slug']),
+            $this->tool('list_feedback', 'What players say about one of your games: comments, ideas (the idea box) and issues (problems), with those waiting for your approval (anonymous ones).', [
+                'slug' => $slug,
+                'section' => ['type' => 'string', 'enum' => ['comment', 'idea', 'issue'], 'description' => 'only one kind (default: all)'],
+            ], ['slug'], true),
+            $this->tool('moderate_feedback', 'On one of your games: approve an anonymous message (it becomes public), remove one, mark an issue resolved or open again.', [
+                'slug' => $slug,
+                'id' => ['type' => 'integer', 'description' => 'from list_feedback'],
+                'action' => ['type' => 'string', 'enum' => ['approve', 'remove', 'resolve', 'reopen']],
+            ], ['slug', 'id', 'action']),
             $this->tool('list_games', 'The public games of the directory (for ideas, or to read how others did something).', [
                 'category' => ['type' => 'string'],
                 'search' => ['type' => 'string'],
@@ -152,6 +203,14 @@ TXT;
                 'list_private_files' => $this->privateFiles($this->owned($args, $user)),
                 'upload_private_files' => $this->uploadUrl($args, $user),
                 'remove_private_files' => $this->removePrivate($args, $user),
+                'save_note' => $this->saveNote($args, $user),
+                'get_notes' => $this->getNotes($args, $user),
+                'delete_note' => $this->deleteNote($args, $user),
+                'add_todos' => $this->addTodos($args, $user),
+                'list_todos' => $this->listTodos($this->owned($args, $user), !empty($args['all'])),
+                'update_todos' => $this->updateTodos($args, $user),
+                'list_feedback' => $this->feedback($args, $user),
+                'moderate_feedback' => $this->moderate($args, $user),
                 'list_games' => $this->games($args),
                 'list_game_files' => $this->gameFiles($args),
                 'read_game_file' => $this->readFile($args),
@@ -262,6 +321,164 @@ TXT;
             $this->bus->dispatch(new ShootProject((int)$project->getId(), true));
         }
         return $this->privateFiles($project);
+    }
+
+    private function noteName(array $args): string
+    {
+        $name = trim((string)($args['name'] ?? '')) ?: Note::DEFAULT;
+        if (!preg_match('/^[\w .\/-]{1,60}$/u', $name)) {
+            throw new McpToolError('A note\'s name: 1 to 60 letters, digits, spaces, . / - _');
+        }
+        return $name;
+    }
+
+    private function saveNote(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $name = $this->noteName($args);
+        $content = (string)($args['content'] ?? '');
+        $note = $this->notes->findOneBy(['project' => $project, 'name' => $name]);
+        if (!$note) {
+            if ($this->notes->count(['project' => $project]) >= Note::MAX_COUNT) {
+                throw new McpToolError('At most ' . Note::MAX_COUNT . ' notes per project: delete_note some, or append to one.');
+            }
+            $this->em->persist($note = new Note($project, $name));
+        }
+        if (!empty($args['append']) && $note->getContent() !== '') {
+            $content = rtrim($note->getContent(), "\n") . "\n\n" . $content;
+        }
+        if (strlen($content) > Note::MAX_SIZE) {
+            throw new McpToolError('A note holds ' . intdiv(Note::MAX_SIZE, 1000) . ' KB at most: shorten it, or split it into several names.');
+        }
+        $note->setContent($content);
+        $this->em->flush();
+        return ['slug' => $project->getSlug(), 'name' => $name, 'size' => strlen($content), 'updated_at' => $note->getUpdatedAt()->format(DATE_ATOM)];
+    }
+
+    private function getNotes(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $all = $this->notes->findBy(['project' => $project], ['name' => 'ASC']);
+        $asked = trim((string)($args['name'] ?? ''));
+        $name = $asked !== '' ? $asked : Note::DEFAULT;
+        $note = array_values(array_filter($all, fn (Note $n) => $n->getName() === $name))[0] ?? null;
+        if (!$note && $asked !== '') {
+            throw new McpToolError("No note \"$asked\" (get_notes without a name lists them).");
+        }
+        return [
+            'slug' => $project->getSlug(),
+            'name' => $name,
+            'content' => $note?->getContent(),
+            'updated_at' => $note?->getUpdatedAt()->format(DATE_ATOM),
+            'notes' => array_map(fn (Note $n) => ['name' => $n->getName(), 'size' => strlen($n->getContent()), 'updated_at' => $n->getUpdatedAt()->format(DATE_ATOM)], $all),
+            'todos_left' => $this->todos->count(['project' => $project, 'done' => false]),
+        ];
+    }
+
+    private function deleteNote(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $note = $this->notes->findOneBy(['project' => $project, 'name' => $this->string($args, 'name')])
+            ?? throw new McpToolError('No note "' . $args['name'] . '".');
+        $this->em->remove($note);
+        $this->em->flush();
+        return ['slug' => $project->getSlug(), 'deleted' => $note->getName()];
+    }
+
+    private function addTodos(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $items = array_values(array_filter(array_map(fn ($t) => trim((string)$t), (array)($args['items'] ?? [])), fn ($t) => $t !== ''));
+        if (!$items) {
+            throw new McpToolError('Give the tasks in items.');
+        }
+        if ($this->todos->count(['project' => $project]) + count($items) > Todo::MAX_COUNT) {
+            throw new McpToolError('At most ' . Todo::MAX_COUNT . ' tasks per project: remove the old ones done (update_todos remove).');
+        }
+        foreach ($items as $text) {
+            $this->em->persist(new Todo($project, mb_substr($text, 0, Todo::MAX_TEXT)));
+        }
+        $this->em->flush();
+        return $this->listTodos($project, false);
+    }
+
+    private function listTodos(Project $project, bool $all): array
+    {
+        $todos = $this->todos->findBy(['project' => $project] + ($all ? [] : ['done' => false]), ['done' => 'ASC', 'id' => 'ASC']);
+        return [
+            'slug' => $project->getSlug(),
+            'todos' => array_map(fn (Todo $t) => ['id' => $t->getId(), 'text' => $t->getText(), 'done' => $t->isDone()]
+                + ($t->isDone() ? ['done_at' => $t->getDoneAt()?->format(DATE_ATOM)] : []), $todos),
+            'left' => $this->todos->count(['project' => $project, 'done' => false]),
+            'done' => $this->todos->count(['project' => $project, 'done' => true]),
+        ];
+    }
+
+    private function updateTodos(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $todo = function (mixed $id) use ($project): Todo {
+            $todo = $this->todos->find((int)$id);
+            if (!$todo || $todo->getProject()->getId() !== $project->getId()) {
+                throw new McpToolError("No task $id in this project (list_todos all=true).");
+            }
+            return $todo;
+        };
+        foreach ((array)($args['done'] ?? []) as $id) {
+            $todo($id)->setDone(true);
+        }
+        foreach ((array)($args['undone'] ?? []) as $id) {
+            $todo($id)->setDone(false);
+        }
+        foreach ((array)($args['text'] ?? []) as $id => $text) {
+            $todo($id)->setText(mb_substr(trim((string)$text), 0, Todo::MAX_TEXT));
+        }
+        foreach ((array)($args['remove'] ?? []) as $id) {
+            $this->em->remove($todo($id));
+        }
+        $this->em->flush();
+        return $this->listTodos($project, false);
+    }
+
+    private function feedback(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $kinds = isset($args['section']) && in_array($args['section'], Comment::SECTIONS, true) ? [$args['section']] : array_values(Comment::SECTIONS);
+        $out = ['slug' => $project->getSlug()];
+        foreach ($kinds as $kind) {
+            $out[$kind] = array_map(fn (Comment $c) => [
+                'id' => $c->getId(),
+                'author' => $c->getAuthor()?->getLogin(),
+                'name' => $c->isAnonymous() ? ($c->getName() ?? 'anonymous') : $c->getAuthor()?->getDisplayName(),
+                'text' => $c->getBody(),
+                'approved' => $c->isApproved(),
+                'date' => $c->getCreatedAt()->format(DATE_ATOM),
+            ] + ($c->isIssue() ? ['resolved' => $c->isResolved()] : []), $this->comments->shownTo($project, $kind, $user, null));
+        }
+        return $out;
+    }
+
+    private function moderate(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $comment = $this->comments->find((int)($args['id'] ?? 0));
+        if (!$comment || $comment->getProject()->getId() !== $project->getId()) {
+            throw new McpToolError('No message ' . ($args['id'] ?? '') . ' on this game (list_feedback).');
+        }
+        $action = (string)($args['action'] ?? '');
+        if (in_array($action, ['resolve', 'reopen'], true) && !$comment->isIssue()) {
+            throw new McpToolError('Only an issue is resolved or reopened.');
+        }
+        match ($action) {
+            'approve' => $comment->approve(),
+            'remove' => $this->em->remove($comment),
+            'resolve' => $comment->setResolved(true),
+            'reopen' => $comment->setResolved(false),
+            default => throw new McpToolError('action: approve, remove, resolve or reopen'),
+        };
+        $this->em->flush();
+        $this->projects->countComments($project);
+        return ['slug' => $project->getSlug(), 'id' => (int)$args['id'], 'done' => $action];
     }
 
     private function games(array $args): array

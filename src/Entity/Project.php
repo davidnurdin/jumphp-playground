@@ -111,6 +111,16 @@ class Project
     #[ORM\Column]
     private int $ratingCount = 0;
 
+    /** its approved comments, ideas and issues, kept up to date by ProjectRepository::countComments() */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $commentCount = 0;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $ideaCount = 0;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $issueCount = 0;
+
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Project $forkOf = null;
 
@@ -208,6 +218,11 @@ class Project
     public function getRatingCount(): int { return $this->ratingCount; }
     /** the average mark, 1 to 5, or null without any */
     public function getRating(): ?float { return $this->ratingCount ? round($this->ratingSum / $this->ratingCount, 1) : null; }
+    public function getCommentCount(): int { return $this->commentCount; }
+    public function getIdeaCount(): int { return $this->ideaCount; }
+    public function getIssueCount(): int { return $this->issueCount; }
+    /** @return array<string, int> section (Comment::SECTIONS) => approved ones */
+    public function getFeedbackCounts(): array { return ['commentaires' => $this->commentCount, 'idees' => $this->ideaCount, 'problemes' => $this->issueCount]; }
     public function getForkOf(): ?Project { return $this->forkOf; }
     public function setForkOf(?Project $project): void { $this->forkOf = $project; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }

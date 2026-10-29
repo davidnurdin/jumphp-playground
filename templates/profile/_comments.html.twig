@@ -1,0 +1,25 @@
+{# a few comments (ideas, issues), each with its game and its writer (a developer's page) #}
+{% if comments %}
+	<ol class="comment-list compact">
+		{% for comment in comments %}
+			<li class="comment">
+				{% if comment.author %}
+					<a class="avatar" href="{{ path('profile', {login: comment.author.login}) }}" tabindex="-1">{% if comment.author.avatarUrl %}<img src="{{ comment.author.avatarUrl }}&s=80" alt="" width="32" height="32" loading="lazy">{% else %}<span>{{ comment.author.login|first|upper }}</span>{% endif %}</a>
+				{% else %}
+					<span class="avatar anon" aria-hidden="true"><span>?</span></span>
+				{% endif %}
+				<div class="comment-body">
+					<div class="comment-head">
+						{% if comment.author %}<a href="{{ path('profile', {login: comment.author.login}) }}"><b>{{ comment.author.displayName }}</b></a>{% else %}<b>{{ comment.name ?: 'Anonyme'|trans }}</b>{% endif %}
+						<span class="faint">{{ 'sur'|trans }}</span> <a href="{{ path('game_comments', {slug: comment.project.slug, section: comment.section}) }}#commentaire-{{ comment.id }}">{{ comment.project.title }}</a>
+						{% if comment.kind != 'comment' %}<span class="badge">{{ comment.kind == 'idea' ? '💡 idée'|trans : '🐞 problème'|trans }}</span>{% endif %}
+						<time class="faint" datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|date(app.request.locale == 'en' ? 'm/d/Y' : 'd/m/Y') }}</time>
+					</div>
+					<p>{{ (comment.body|length > 280 ? comment.body|slice(0, 279) ~ '…' : comment.body)|nl2br }}</p>
+				</div>
+			</li>
+		{% endfor %}
+	</ol>
+{% else %}
+	<p class="muted">{{ empty|trans }}</p>
+{% endif %}

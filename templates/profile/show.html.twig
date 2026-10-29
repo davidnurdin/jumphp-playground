@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ '%name% – ses jeux rétro en PHP · JumPHP playground'|trans({'%name%': dev.displayName}) }}{% endblock %}
+{% block description %}{{ (games|length > 1 ? '%count% jeux de %name%, écrits en PHP avec JumPHP et jouables dans le navigateur.' : 'Les jeux de %name%, écrits en PHP avec JumPHP et jouables dans le navigateur.')|trans({'%count%': games|length, '%name%': dev.displayName}) }}{% endblock %}
+{% block og_type %}profile{% endblock %}
+{% block head %}{% if not games %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap">
+		<div class="profile-head">
+			{% if dev.avatarUrl %}<img class="profile-avatar" src="{{ dev.avatarUrl }}&s=240" alt="" width="120" height="120">{% else %}<span class="profile-avatar">{{ dev.login|first|upper }}</span>{% endif %}
+			<div>
+				<h1>{{ dev.displayName }}</h1>
+				<p class="muted">{% if dev.name %}@{{ dev.login }} · {% endif %}<a href="https://github.com/{{ dev.login }}" rel="noopener">GitHub</a> · {{ 'membre depuis %date%'|trans({'%date%': dev.createdAt|date('m/Y')}) }}</p>
+				<dl class="stats">
+					<div><dt>{{ 'Jeux'|trans }}</dt><dd>{{ games|length }}</dd></div>
+					<div><dt>{{ 'Parties'|trans }}</dt><dd>{{ plays }}</dd></div>
+					{% if rating %}<div><dt>{{ 'Note moyenne'|trans }}</dt><dd class="stars-mini">★ {{ rating|number_format(1, app.request.locale == 'en' ? '.' : ',') }}</dd></div>{% endif %}
+				</dl>
+				{% if app.user and app.user.id == dev.id %}<p><a class="btn small" href="{{ path('studio') }}">{{ 'Mes projets'|trans }}</a></p>{% endif %}
+			</div>
+		</div>
+	</div>
+</section>
+<div class="wrap">
+	<section class="section">
+		<div class="section-head"><h2>{{ 'Ses jeux'|trans }}</h2></div>
+		{% if games %}
+			<div class="grid">{% for game in games %}{% include '_card.html.twig' %}{% endfor %}</div>
+		{% else %}
+			<div class="panel empty-state">{{ 'Pas encore de jeu publié.'|trans }}</div>
+		{% endif %}
+	</section>
+	<div class="two">
+		<section>
+			<h2>{{ 'Derniers commentaires reçus'|trans }}</h2>
+			{% include 'profile/_comments.html.twig' with {comments: received, empty: 'Aucun commentaire sur ses jeux pour l\'instant.'} %}
+		</section>
+		<section>
+			<h2>{{ 'Ses derniers commentaires'|trans }}</h2>
+			{% include 'profile/_comments.html.twig' with {comments: written, empty: 'Aucun commentaire écrit pour l\'instant.'} %}
+		</section>
+	</div>
+</div>
+{% endblock %}

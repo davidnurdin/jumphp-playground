@@ -44,6 +44,35 @@
 				</form>
 			</div>
 			<aside>
+				{% if project.publishedSha %}
+				<div class="panel">
+					<h2>{{ 'Avis des joueurs'|trans }}</h2>
+					{% if pending %}<p><span class="badge creating">{{ '%count% à valider'|trans({'%count%': pending}) }}</span> {{ 'Les messages anonymes attendent votre validation avant d\'être visibles.'|trans }}</p>{% endif %}
+					<p class="actions">
+						<a class="btn small" href="{{ path('game_comments', {slug: project.slug, section: 'commentaires'}) }}#retours">💬 {{ 'Commentaires'|trans }} ({{ project.commentCount }})</a>
+						<a class="btn small" href="{{ path('game_comments', {slug: project.slug, section: 'idees'}) }}#retours">💡 {{ 'Idées'|trans }} ({{ project.ideaCount }})</a>
+						<a class="btn small" href="{{ path('game_comments', {slug: project.slug, section: 'problemes'}) }}#retours">🐞 {{ 'Problèmes'|trans }} ({{ project.issueCount }})</a>
+					</p>
+				</div>
+				{% endif %}
+				<div class="panel">
+					<h2>{{ 'Notes et tâches (privé)'|trans }}</h2>
+					<p class="muted">{{ 'Tenues par votre Claude (MCP : save_note, add_todos, update_todos) : l\'état d\'avancement du jeu et ce qu\'il reste à faire. Vous seul les voyez.'|trans }}</p>
+					{% set left = todos|filter(t => not t.done) %}
+					{% if todos %}
+						<ul class="todo-list">
+							{% for todo in todos|slice(0, 60) %}<li class="{{ todo.done ? 'done' }}"><span aria-hidden="true">{{ todo.done ? '☑' : '☐' }}</span> {{ todo.text }}</li>{% endfor %}
+						</ul>
+						<p class="faint">{{ '%left% à faire, %done% faites'|trans({'%left%': left|length, '%done%': todos|length - left|length}) }}</p>
+					{% endif %}
+					{% for note in notes %}
+						<details class="note"{{ note.name == 'progress' ? ' open' }}>
+							<summary><code>{{ note.name }}</code> <span class="faint">{{ note.updatedAt|date('d/m H:i') }}</span></summary>
+							<pre class="code">{{ note.content }}</pre>
+						</details>
+					{% endfor %}
+					{% if not todos and not notes %}<p class="faint">{{ 'Rien pour l\'instant.'|trans }}</p>{% endif %}
+				</div>
 				<div class="panel">
 					<h2>{{ 'Publication'|trans }}</h2>
 					<dl class="facts">

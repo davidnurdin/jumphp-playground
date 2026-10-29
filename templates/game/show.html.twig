@@ -39,7 +39,7 @@
 				<p><a class="btn primary big" href="{{ path('game_play', {slug: project.slug}) }}">▶ {{ 'Jouer'|trans }}</a></p>
 				<dl class="facts">
 					{% if project.gameInfo.controls ?? null %}<dt>{{ 'Commandes'|trans }}</dt><dd>{{ project.gameInfo.controls }}</dd>{% endif %}
-					<dt>{{ 'Auteur'|trans }}</dt><dd><a href="https://github.com/{{ project.owner.login }}">{{ project.owner.displayName }}</a></dd>
+					<dt>{{ 'Auteur'|trans }}</dt><dd><a href="{{ path('profile', {login: project.owner.login}) }}">{{ project.owner.displayName }}</a></dd>
 					<dt>{{ 'Mis à jour'|trans }}</dt><dd>{{ project.publishedAt|date('d/m/Y') }}</dd>
 					{% if project.forkOf %}<dt>{{ 'Fork de'|trans }}</dt><dd><a href="{{ path('game', {slug: project.forkOf.slug}) }}">{{ project.forkOf.title }}</a></dd>{% endif %}
 					<dt>{{ 'Moteur'|trans }}</dt><dd>JumPHP {{ project.engineVersion }} ({{ 'PHP en WebAssembly'|trans }})</dd>
@@ -57,6 +57,7 @@
 			</form>
 		</section>
 		{% endif %}
+		<div class="section">{% include 'game/_comments.html.twig' with {from: 'page'} %}</div>
 		{% if others %}
 		<section class="section">
 			<div class="section-head"><h2>{{ 'Dans la même catégorie'|trans }}</h2><a href="{{ path('category', {slug: project.category.slug}) }}">{{ 'Tout voir'|trans }} →</a></div>
