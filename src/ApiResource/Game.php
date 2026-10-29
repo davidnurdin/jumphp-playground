@@ -40,6 +40,10 @@ final class Game
 
     public string $description = '';
 
+    /** @var array<string, string> */
+    #[ApiProperty(description: 'Sa description dans d\'autres langues, s\'il en a (langue => texte, config/game.yaml `descriptions:`).')]
+    public array $descriptions = [];
+
     #[ApiProperty(description: 'Sa catégorie (slug).')]
     public string $category = '';
 

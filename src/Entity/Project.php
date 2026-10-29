@@ -140,6 +140,10 @@ class Project
     public function setTitle(string $title): void { $this->title = $title; $this->touch(); }
     public function getDescription(): string { return $this->description; }
     public function setDescription(string $description): void { $this->description = $description; $this->touch(); }
+    /** the game's own text in a language (game.yaml `descriptions:`), if it has one */
+    public function hasDescriptionIn(string $lang): bool { return isset($this->gameInfo['descriptions'][$lang]); }
+    /** the description in a language (the visitor's): the game's own text in it, else the main one */
+    public function getDescriptionIn(string $lang): string { return (string)($this->gameInfo['descriptions'][$lang] ?? $this->description); }
     public function getBrief(): string { return $this->brief; }
     public function setBrief(string $brief): void { $this->brief = $brief; $this->touch(); }
     public function getCategory(): Category { return $this->category; }

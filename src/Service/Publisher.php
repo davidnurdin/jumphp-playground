@@ -27,6 +27,7 @@ final class Publisher
     private const GAME_DEFAULTS = [
         'id' => 'game', 'title' => 'Game', 'version' => '1.0.0', 'description' => '', 'width' => 320, 'height' => 180,
         'lang' => 'en', 'online' => false, 'net_url' => null, 'touch' => null, 'controls' => null,
+        'descriptions' => [],   // the description in other languages: {en: '…', fr: '…'} (the site shows the visitor's)
     ];
 
     public function __construct(
@@ -255,6 +256,13 @@ final class Publisher
         foreach (['title', 'description', 'lang', 'version'] as $key) {
             $info[$key] = is_scalar($info[$key]) ? (string)$info[$key] : self::GAME_DEFAULTS[$key];
         }
+        $descriptions = [];
+        foreach (is_array($info['descriptions']) ? $info['descriptions'] : [] as $lang => $text) {
+            if (is_string($lang) && preg_match('/^[a-z]{2}$/', $lang) && is_scalar($text) && trim((string)$text) !== '') {
+                $descriptions[$lang] = mb_substr(trim((string)$text), 0, 1000);
+            }
+        }
+        $info['descriptions'] = $descriptions;
 
         // what the browser loads, and the PHP syntax of it
         $loaded = [];

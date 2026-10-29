@@ -4,7 +4,7 @@
 	'@context': 'https://schema.org',
 	'@type': 'VideoGame',
 	'name': project.title,
-	'description': project.description ?: (project.site.description ?? ''),
+	'description': project.descriptionIn(app.request.locale) ?: (project.site.description ?? ''),
 	'url': page,
 	'image': image,
 	'genre': project.category.name|trans,

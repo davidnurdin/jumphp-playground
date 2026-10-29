@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 {% set site = project.site %}
 {% block title %}{{ site and site.title ? site.title : '%title% – jeu gratuit en ligne (%category%)'|trans({'%title%': project.title, '%category%': project.category.name|trans|lower}) }}{% endblock %}
-{% block description %}{{ site and site.description ? site.description : (project.description ?: '%title%, un jeu écrit en PHP avec JumPHP, à jouer gratuitement dans le navigateur.'|trans({'%title%': project.title})) }}{% endblock %}
+{% block description %}{{ project.hasDescriptionIn(app.request.locale) ? project.descriptionIn(app.request.locale) : site and site.description ? site.description : (project.description ?: '%title%, un jeu écrit en PHP avec JumPHP, à jouer gratuitement dans le navigateur.'|trans({'%title%': project.title})) }}{% endblock %}
 {% block og_type %}video.game{% endblock %}
 {% block og_image %}{% if site and site.image %}{{ url('game', {slug: project.slug}) ~ '/' ~ site.image }}{% elseif project.hasThumbnail %}{{ url('game_thumb', {slug: project.slug, sha: project.publishedSha|slice(0, 12)}) }}{% else %}{{ parent() }}{% endif %}{% endblock %}
 {% block head %}{% if project.publishedSha %}{% include 'game/_jsonld.html.twig' %}{% endif %}{% if not project.listed %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
@@ -31,7 +31,7 @@
 			<div>
 				<span class="badge">{{ project.category.name|trans }}</span>
 				<h2 style="font-size: clamp(26px, 4vw, 38px); margin-top: 10px">{{ project.title }}</h2>
-				{% if project.description %}<p class="muted" style="font-size: 18px">{{ project.description }}</p>{% endif %}
+				{% if project.descriptionIn(app.request.locale) %}<p class="muted" style="font-size: 18px">{{ project.descriptionIn(app.request.locale) }}</p>{% endif %}
 				<p><a class="btn primary big" href="{{ path('game_play', {slug: project.slug}) }}">▶ {{ 'Jouer'|trans }}</a></p>
 				<dl class="facts">
 					{% if project.gameInfo.controls ?? null %}<dt>{{ 'Commandes'|trans }}</dt><dd>{{ project.gameInfo.controls }}</dd>{% endif %}

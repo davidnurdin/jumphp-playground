@@ -10,7 +10,8 @@
 	<div class="body">
 		<span class="cat">{{ game.category.name|trans }}</span>
 		<h3>{{ game.title }}</h3>
-		{% if game.description %}<p>{{ game.description }}</p>{% endif %}
+		{% set description = game.descriptionIn(app.request.locale) %}
+		{% if description %}<p>{{ description }}</p>{% endif %}
 		<div class="meta">
 			{% if game.owner.avatarUrl %}<img src="{{ game.owner.avatarUrl }}&s=40" alt="" width="20" height="20" loading="lazy">{% endif %}
 			<span>{{ game.owner.login }}</span>

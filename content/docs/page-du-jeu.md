@@ -15,6 +15,21 @@ racine de votre domaine si vous le déployez chez vous (le jeu étant dans `play
 
 Vérifiez-la avec `bin/jumphp build:site <id>` puis `bin/jumphp siteshot <id>`.
 
+## La description, en français et en anglais
+
+Le site existe en français et en anglais : il montre la description du jeu dans la langue du visiteur.
+Écrivez-la dans les deux langues dans `config/game.yaml` :
+
+```yaml
+game:
+  description: "Un casse-briques : 3 vies, un nouveau mur à chaque niveau."
+  descriptions:
+    fr: "Un casse-briques : 3 vies, un nouveau mur à chaque niveau."
+    en: "A brick breaker: 3 lives, a new wall every level."
+```
+
+Sans traduction dans la langue du visiteur, c'est la description du projet qui s'affiche.
+
 ## L'image de l'annuaire
 
 `assets/thumbnail.png` (16:9). Sinon le site prend l'image `og:image` de la page d'accueil, sinon l'icône du

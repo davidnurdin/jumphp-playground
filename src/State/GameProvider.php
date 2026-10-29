@@ -59,6 +59,7 @@ final class GameProvider implements ProviderInterface
         $game->slug = $p->getSlug();
         $game->title = $p->getTitle();
         $game->description = $p->getDescription();
+        $game->descriptions = $p->getGameInfo()['descriptions'] ?? [];
         $game->category = $p->getCategory()->getSlug();
         $game->kind = $p->getKind();
         $game->author = $p->getOwner()->getLogin();

@@ -15,6 +15,21 @@ of your domain if you deploy it yourself (the game being in `play/`). Examples:
 
 Check it with `bin/jumphp build:site <id>` then `bin/jumphp siteshot <id>`.
 
+## The description, in French and in English
+
+The site exists in French and in English: it shows the game's description in the visitor's language. Write it
+in both languages in `config/game.yaml`:
+
+```yaml
+game:
+  description: "A brick breaker: 3 lives, a new wall every level."
+  descriptions:
+    fr: "Un casse-briques : 3 vies, un nouveau mur à chaque niveau."
+    en: "A brick breaker: 3 lives, a new wall every level."
+```
+
+Without a translation in the visitor's language, the project's description is shown.
+
 ## The directory image
 
 `assets/thumbnail.png` (16:9). Otherwise the site uses the home page's `og:image`, otherwise the game's icon,
