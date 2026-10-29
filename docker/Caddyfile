@@ -1,5 +1,5 @@
 # Both sites of the playground: the portal (APP_URL) and the isolated games origin (PLAY_URL), one Symfony app.
-# SERVER_NAMES: "jumphp.mimichat.fr, play.jumphp.mimichat.fr" in production (HTTPS by Let's Encrypt), ":80" in dev.
+# SERVER_NAMES: "jumphp.net, play.jumphp.net" in production (HTTPS by Let's Encrypt), ":80" in dev.
 {
 	frankenphp
 	{$CADDY_GLOBAL_OPTIONS}
@@ -20,4 +20,25 @@
 		format json
 	}
 	php_server
+}
+
+# the other names of the two sites (APP_ALIASES: www and the portal's previous name, PLAY_ALIASES: the games
+# origin's previous name): each address moves to the same path on the real name, permanently (301; 308 for the
+# other methods, which keeps a POST a POST)
+(moved) {
+	@read method GET HEAD
+	handle @read {
+		redir {args[0]}{uri} 301
+	}
+	handle {
+		redir {args[0]}{uri} 308
+	}
+}
+
+{$APP_ALIASES:http://app-alias.localhost} {
+	import moved {$APP_URL}
+}
+
+{$PLAY_ALIASES:http://play-alias.localhost} {
+	import moved {$PLAY_URL}
 }

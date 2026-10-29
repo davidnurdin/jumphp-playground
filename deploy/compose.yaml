@@ -31,6 +31,9 @@ services:
     environment:
       <<: *env
       SERVER_NAMES: ${APP_HOST}, ${PLAY_HOST}
+      # www and the previous names, redirected to the real ones (docker/Caddyfile)
+      APP_ALIASES: www.${APP_HOST}, ${OLD_APP_HOST:-http://old-app.localhost}
+      PLAY_ALIASES: ${OLD_PLAY_HOST:-http://old-play.localhost}
     volumes:
       - storage:/app/var/storage
       - engines:/app/public/engine
@@ -46,11 +49,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK}
-      - traefik.http.routers.jumphp-playground-http.rule=Host(`${APP_HOST}`) || Host(`${PLAY_HOST}`)
+      - traefik.http.routers.jumphp-playground-http.rule=Host(`${APP_HOST}`) || Host(`${PLAY_HOST}`) || Host(`www.${APP_HOST}`) || Host(`${OLD_APP_HOST:-old-app.localhost}`) || Host(`${OLD_PLAY_HOST:-old-play.localhost}`)
       - traefik.http.routers.jumphp-playground-http.entrypoints=${TRAEFIK_HTTP_ENTRYPOINT}
       - traefik.http.routers.jumphp-playground-http.service=jumphp-playground-http
       - traefik.http.services.jumphp-playground-http.loadbalancer.server.port=80
-      - traefik.tcp.routers.jumphp-playground-tls.rule=HostSNI(`${APP_HOST}`) || HostSNI(`${PLAY_HOST}`)
+      - traefik.tcp.routers.jumphp-playground-tls.rule=HostSNI(`${APP_HOST}`) || HostSNI(`${PLAY_HOST}`) || HostSNI(`www.${APP_HOST}`) || HostSNI(`${OLD_APP_HOST:-old-app.localhost}`) || HostSNI(`${OLD_PLAY_HOST:-old-play.localhost}`)
       - traefik.tcp.routers.jumphp-playground-tls.entrypoints=${TRAEFIK_ENTRYPOINT}
       - traefik.tcp.routers.jumphp-playground-tls.service=jumphp-playground-tls
       - traefik.tcp.routers.jumphp-playground-tls.tls.passthrough=true

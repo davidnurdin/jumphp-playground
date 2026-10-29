@@ -24,7 +24,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * A game on the portal (jumphp.mimichat.fr/<slug>): its page (its own site in a frame of the games origin, or
+ * A game on the portal (<APP_URL>/<slug>): its page (its own site in a frame of the games origin, or
  * the portal's page), the player, the sources, the online editor, the fork. These routes come after every
  * other route of the portal (priority -10).
  */
