@@ -23,6 +23,8 @@ claude mcp add --transport http --scope user jumphp https://<ce site>/mcp --head
 
 Le jeton donne accès à votre compte du playground : ne le mettez jamais dans un dépôt.
 
+**Pour voir Claude travailler** (les tests en direct, les écrans du jeu, intervenir) : installez [le panneau JumPHP](/docs/panneau-claude) dans Claude Code.
+
 ## Faire un jeu
 
 Dans Claude Code, demandez simplement :

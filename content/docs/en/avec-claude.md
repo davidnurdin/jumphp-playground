@@ -23,6 +23,8 @@ claude mcp add --transport http --scope user jumphp https://<this site>/mcp --he
 
 The token gives access to your playground account: never put it in a repository.
 
+**To watch Claude work** (the tests live, the game's screens, stepping in): install [the JumPHP pane](/docs/panneau-claude) in Claude Code.
+
 ## Making a game
 
 In Claude Code, just ask:

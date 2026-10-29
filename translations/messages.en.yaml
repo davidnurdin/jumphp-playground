@@ -414,3 +414,4 @@
 "Ce jeu n'a pas de tests : ajoutez des fichiers tests/…Test.php (PHPUnit), poussez, puis relancez.": "This game has no tests: add tests/…Test.php files (PHPUnit), push, then run again."
 "Le jeu n'est pas encore publié.": "The game isn't published yet."
 "Tester son jeu (PHPUnit)": "Testing your game (PHPUnit)"
+"Le panneau JumPHP de Claude Code": "The JumPHP pane for Claude Code"

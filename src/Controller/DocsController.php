@@ -19,6 +19,7 @@ final class DocsController extends AbstractController
             'index' => 'Toutes les façons',
             'bac-a-sable' => 'Le bac à sable (sans compte)',
             'avec-claude' => 'Avec votre Claude',
+            'panneau-claude' => 'Le panneau JumPHP de Claude Code',
             'editeur-en-ligne' => 'L\'éditeur en ligne',
             'en-local' => 'Sur votre ordinateur',
             'importer' => 'Importer un dépôt',
