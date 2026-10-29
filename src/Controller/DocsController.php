@@ -24,6 +24,7 @@ final class DocsController extends AbstractController
             'importer' => 'Importer un dépôt',
             'remake-amstrad' => 'Remake Amstrad CPC',
             'portage' => 'Porter un jeu existant',
+            'tests' => 'Tester son jeu (PHPUnit)',
         ],
         'Tutoriels' => [
             'hello-world' => '1. Hello world',

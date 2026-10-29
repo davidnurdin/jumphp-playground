@@ -3,6 +3,8 @@ parameters:
     app.play_url: '%env(PLAY_URL)%'
     app.play_host: '%env(PLAY_HOST)%'
     app.storage_dir: '%kernel.project_dir%/var/storage'
+    # shared with the tester service (docker/tester): the games' PHPUnit runs
+    app.tests_dir: '%kernel.project_dir%/var/tests'
     app.engine_dir: '%kernel.project_dir%/public/engine'
 
 services:
@@ -15,6 +17,7 @@ services:
             string $shooterUrl: '%env(SHOOTER_URL)%'
             string $playHost: '%app.play_host%'
             string $storageDir: '%app.storage_dir%'
+            string $testsDir: '%app.tests_dir%'
             string $engineDir: '%app.engine_dir%'
             string $jumphpRepo: '%env(JUMPHP_REPO)%'
             string $runtimes: '%env(JUMPHP_RUNTIMES)%'
@@ -35,3 +38,4 @@ services:
 when@test:
     parameters:
         app.storage_dir: '%kernel.project_dir%/var/storage-test'
+        app.tests_dir: '%kernel.project_dir%/var/tests-test'

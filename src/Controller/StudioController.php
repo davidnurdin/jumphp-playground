@@ -9,12 +9,14 @@ use App\Repository\CategoryRepository;
 use App\Repository\CommentRepository;
 use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\TestRunRepository;
 use App\Repository\TodoRepository;
 use App\Service\PrivateFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
 use App\Service\Publisher;
 use App\Service\Slugs;
+use App\Service\TestRunner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;
@@ -95,7 +97,7 @@ final class StudioController extends AbstractController
     }
 
     #[Route('/projet/{slug}', name: 'studio_project', methods: ['GET', 'POST'])]
-    public function project(string $slug, Request $request, #[CurrentUser] User $user, CommentRepository $comments, NoteRepository $notes, TodoRepository $todos): Response
+    public function project(string $slug, Request $request, #[CurrentUser] User $user, CommentRepository $comments, NoteRepository $notes, TodoRepository $todos, TestRunRepository $runs, TestRunner $tests): Response
     {
         $project = $this->owned($slug, $user);
         if ($request->isMethod('POST')) {
@@ -122,6 +124,8 @@ final class StudioController extends AbstractController
             'pending' => $comments->pendingByProject($user)[$project->getId()] ?? 0,
             'notes' => $notes->findBy(['project' => $project], ['name' => 'ASC']),
             'todos' => $todos->findBy(['project' => $project], ['done' => 'ASC', 'id' => 'ASC']),
+            'test_runs' => array_map($tests->refresh(...), $runs->latest($project, 5)),
+            'has_tests' => $tests->hasTests($project),
             'categories' => $this->categories->ordered(),
             'mcp_url' => rtrim($this->appUrl, '/') . '/mcp',
         ]);
@@ -141,6 +145,34 @@ final class StudioController extends AbstractController
             default => $this->addFlash('error', $this->translator->trans('Non publié :') . "\n" . implode("\n", $result->errors)),
         };
         return $this->redirectToRoute('studio_project', ['slug' => $slug]);
+    }
+
+    /** The game's PHPUnit tests, run now in the tester's sandbox (TestRunner). */
+    #[Route('/projet/{slug}/tests', name: 'studio_tests_run', methods: ['POST'])]
+    public function testsRun(string $slug, Request $request, #[CurrentUser] User $user, TestRunner $tests): Response
+    {
+        $project = $this->owned($slug, $user);
+        if (!$this->isCsrfTokenValid('studio-project-' . $project->getId(), (string)$request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+        try {
+            $run = $tests->start($project);
+        } catch (ProjectException $e) {
+            $this->addFlash('error', $e->trans($this->translator));
+            return $this->redirectToRoute('studio_project', ['slug' => $slug]);
+        }
+        return $this->redirectToRoute('studio_tests', ['slug' => $slug, 'id' => $run->getId()]);
+    }
+
+    #[Route('/projet/{slug}/tests/{id}', name: 'studio_tests', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function testsShow(string $slug, int $id, #[CurrentUser] User $user, TestRunRepository $runs, TestRunner $tests): Response
+    {
+        $project = $this->owned($slug, $user);
+        $run = $runs->find($id);
+        if (!$run || $run->getProject()->getId() !== $project->getId()) {
+            throw new NotFoundHttpException();
+        }
+        return $this->render('studio/tests.html.twig', ['project' => $project, 'run' => $tests->refresh($run), 'runs' => $runs->latest($project, 10)]);
     }
 
     /** One private file (assets/app.js sends them one by one): path = folder + name. */

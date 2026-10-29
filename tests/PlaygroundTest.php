@@ -31,7 +31,7 @@ final class PlaygroundTest extends WebTestCase
         $container = static::getContainer();
         $this->em = $container->get(EntityManagerInterface::class);
         $connection = $this->em->getConnection();
-        foreach (['comment', 'note', 'todo', 'rating', 'draft', 'project', 'app_user'] as $table) {
+        foreach (['test_run', 'comment', 'note', 'todo', 'rating', 'draft', 'project', 'app_user'] as $table) {
             $connection->executeStatement("DELETE FROM $table");
         }
         $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => 'arcade']);
@@ -345,6 +345,52 @@ final class PlaygroundTest extends WebTestCase
         $tool('moderate_feedback', ['slug' => 'test-game', 'id' => $issue['id'], 'action' => 'resolve']);
         self::assertTrue($tool('list_feedback', ['slug' => 'test-game', 'section' => 'issue'])['structuredContent']['issue'][0]['resolved']);
         self::assertTrue($tool('get_notes', ['slug' => 'nope'])['isError']);
+    }
+
+    public function testPhpunitRunsInTheTester(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/studio/projet/test-game');
+        self::assertAnySelectorTextContains('.panel', 'Pas encore de tests');
+        $storage = static::getContainer()->getParameter('app.storage_dir');
+        $testsDir = static::getContainer()->getParameter('app.tests_dir');
+        (new Filesystem())->remove($testsDir);
+        (new Filesystem())->dumpFile("$storage/published/{$this->project->getId()}/" . self::SHA . '/game/tests/ScoreTest.php', "<?php\n");
+        $this->get(self::APP, '/studio/projet/test-game');
+        $this->client->submit($this->client->getCrawler()->selectButton('▶ Lancer les tests')->form());
+        self::assertResponseRedirects();
+        $id = (int)basename((string)$this->client->getResponse()->headers->get('Location'));
+        // what the tester gets: the game, the engine and an autoloader of both
+        self::assertFileExists("$testsDir/jobs/$id.json");
+        self::assertFileExists("$testsDir/work/$id/tests/ScoreTest.php");
+        self::assertFileExists("$testsDir/work/$id/vendor/autoload_engine.php");
+        self::assertStringContainsString("'App\\\\'", (string)file_get_contents("$testsDir/work/$id/vendor/autoload.php"));
+        $this->client->followRedirect();
+        self::assertSelectorExists('meta[http-equiv="refresh"]');
+        // what it found
+        file_put_contents("$testsDir/results/$id.json", json_encode(['status' => 'failed', 'output' => 'FAILURES!', 'summary' => [
+            'tests' => 2, 'assertions' => 2, 'failures' => 1, 'errors' => 0, 'skipped' => 0, 'time' => 0.01, 'cases' => [
+                ['class' => 'Tests\\ScoreTest', 'name' => 'testAdds', 'status' => 'passed', 'message' => null, 'time' => 0.0],
+                ['class' => 'Tests\\ScoreTest', 'name' => 'testBonus', 'status' => 'failed', 'message' => 'Failed asserting that 3 is identical to 4.', 'time' => 0.0],
+            ]]]));
+        $this->get(self::APP, "/studio/projet/test-game/tests/$id");
+        self::assertSelectorNotExists('meta[http-equiv="refresh"]');
+        self::assertSelectorTextContains('.test-cases li.failed', 'Failed asserting that 3 is identical to 4.');
+        self::assertSelectorTextContains('pre.test-output', 'FAILURES!');
+        self::assertFileDoesNotExist("$testsDir/work/$id");
+        // the owner's Claude sees the same; nobody else sees the page
+        $this->client->request('POST', 'http://' . self::APP . '/mcp', [], [], [
+            'HTTP_AUTHORIZATION' => 'Bearer jph_test', 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json, text/event-stream',
+        ], json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'get_test_run', 'arguments' => ['slug' => 'test-game']]]));
+        $run = json_decode((string)$this->client->getResponse()->getContent(), true)['result']['structuredContent'];
+        self::assertSame(['failed', 2, 1], [$run['status'], $run['tests'], $run['failures']]);
+        $other = new User(1003, 'other');
+        $this->em->persist($other);
+        $this->em->flush();
+        $this->client->loginUser($other);
+        $this->get(self::APP, "/studio/projet/test-game/tests/$id");
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testPrivateFiles(): void

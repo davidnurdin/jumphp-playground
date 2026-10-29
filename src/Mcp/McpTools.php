@@ -11,6 +11,7 @@ use App\Repository\CategoryRepository;
 use App\Repository\CommentRepository;
 use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\TestRunRepository;
 use App\Repository\TodoRepository;
 use App\Message\ShootProject;
 use App\Service\GameFiles;
@@ -19,6 +20,7 @@ use App\Service\ProjectException;
 use App\Service\Projects;
 use App\Service\Publisher;
 use App\Service\Slugs;
+use App\Service\TestRunner;
 use App\Service\UploadToken;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -44,6 +46,8 @@ final class McpTools
         private NoteRepository $notes,
         private TodoRepository $todos,
         private CommentRepository $comments,
+        private TestRunner $tests,
+        private TestRunRepository $testRuns,
         private string $appUrl,
     ) {
     }
@@ -77,6 +81,9 @@ Private memory of a project (only its owner sees it, never published): notes and
 session on a project, get_notes and list_todos to know where it stands; while working, add_todos for what is left
 and update_todos when something is done; at the end, save_note (name "progress") with where the game stands, what
 was decided and what comes next, so the next session (or another computer) picks it up.
+PHPUnit: the game's tests/ folder (PHPUnit 11, namespace Tests\\, the game's code as App\\, no SDL window) runs on
+the published version in the playground's sandbox: run_tests after sync_project, then get_test_run until done;
+the owner sees the results in the studio.
 The players' comments, ideas (the idea box) and issues on the game: list_feedback; the owner approves the
 anonymous ones (moderate_feedback), and marks an issue resolved once its fix is published.
 TXT;
@@ -145,6 +152,11 @@ TXT;
                 'remove' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'ids of tasks to delete'],
                 'text' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'description' => 'new texts: {"<id>": "text"}'],
             ], ['slug']),
+            $this->tool('run_tests', 'Run the PHPUnit tests (tests/…Test.php) of the published version of one of your games, in the playground\'s sandbox (PHP 8.3, PHPUnit 11, no network, ' . '120 s at most). Returns the run: call get_test_run until its status is passed, failed or error.', ['slug' => $slug], ['slug']),
+            $this->tool('get_test_run', 'A test run of one of your games (the last one without id): status (queued, running, passed, failed, error), counts, each test with its failure message, PHPUnit\'s output.', [
+                'slug' => $slug,
+                'id' => ['type' => 'integer'],
+            ], ['slug'], true),
             $this->tool('list_feedback', 'What players say about one of your games: comments, ideas (the idea box) and issues (problems), with those waiting for your approval (anonymous ones).', [
                 'slug' => $slug,
                 'section' => ['type' => 'string', 'enum' => ['comment', 'idea', 'issue'], 'description' => 'only one kind (default: all)'],
@@ -209,6 +221,8 @@ TXT;
                 'add_todos' => $this->addTodos($args, $user),
                 'list_todos' => $this->listTodos($this->owned($args, $user), !empty($args['all'])),
                 'update_todos' => $this->updateTodos($args, $user),
+                'run_tests' => $this->tests->start($this->owned($args, $user))->toArray() + ['next' => 'call get_test_run with this id until status is passed, failed or error'],
+                'get_test_run' => $this->testRun($args, $user),
                 'list_feedback' => $this->feedback($args, $user),
                 'moderate_feedback' => $this->moderate($args, $user),
                 'list_games' => $this->games($args),
@@ -438,6 +452,16 @@ TXT;
         }
         $this->em->flush();
         return $this->listTodos($project, false);
+    }
+
+    private function testRun(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $run = isset($args['id']) ? $this->testRuns->find((int)$args['id']) : ($this->testRuns->latest($project, 1)[0] ?? null);
+        if (!$run || $run->getProject()->getId() !== $project->getId()) {
+            throw new McpToolError('No test run' . (isset($args['id']) ? ' ' . $args['id'] : '') . ' of this game (run_tests).');
+        }
+        return $this->tests->refresh($run)->toArray() + ['page' => rtrim($this->appUrl, '/') . '/studio/projet/' . $project->getSlug() . '/tests/' . $run->getId()];
     }
 
     private function feedback(array $args, User $user): array

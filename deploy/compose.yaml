@@ -23,6 +23,7 @@ x-app: &app
   volumes:
     - storage:/app/var/storage
     - engines:/app/public/engine
+    - tests:/app/var/tests
   depends_on: [db]
 
 services:
@@ -37,6 +38,7 @@ services:
     volumes:
       - storage:/app/var/storage
       - engines:/app/public/engine
+      - tests:/app/var/tests
       - caddy_data:/data
       - caddy_config:/config
     networks: [default, traefik]
@@ -84,6 +86,24 @@ services:
       SHOOTER_MAP: MAP ${PLAY_HOST} app
     command: ["node", "/shooter/server.cjs"]
 
+  # the games' PHPUnit tests, in a sandbox (docker/tester/runner.php): no network, PHPUnit as nobody, limits; it
+  # sees only the tests volume (no secret, no private file)
+  tester:
+    build: { context: ../docker/tester }
+    image: jumphp-playground-tester:prod
+    restart: unless-stopped
+    network_mode: none
+    init: true
+    read_only: true
+    tmpfs: ["/sandbox:size=1g", "/tmp:size=64m"]
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER, KILL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1
+    volumes: [tests:/tests]
+
   db:
     image: mariadb:11.4
     restart: unless-stopped
@@ -102,6 +122,7 @@ networks:
 volumes:
   db:
   storage:
+  tests:
   engines:
   caddy_data:
   caddy_config:

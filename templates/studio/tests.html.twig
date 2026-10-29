@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Tests de %title% – studio JumPHP'|trans({'%title%': project.title}) }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% if not run.done %}<meta http-equiv="refresh" content="2">{% endif %}{% endblock %}
+{% block body %}
+{% set s = run.summary %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h1>{{ 'Tests'|trans }} · {{ project.title }} {% include 'studio/_test_status.html.twig' with {status: run.status} %}</h1>
+			<div class="actions">
+				<a class="btn" href="{{ path('studio_project', {slug: project.slug}) }}">← {{ 'Projet'|trans }}</a>
+				<form method="post" action="{{ path('studio_tests_run', {slug: project.slug}) }}"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn primary" type="submit" {{ not run.done ? 'disabled' }}>▶ {{ 'Relancer'|trans }}</button></form>
+			</div>
+		</div>
+		<p class="muted">
+			{{ 'Commit'|trans }} <a href="{{ project.repoUrl }}/commit/{{ run.sha }}"><code>{{ run.sha|slice(0, 7) }}</code></a> ·
+			{{ run.createdAt|date('d/m/Y H:i:s') }}
+			{% if s.tests is defined %} · {{ '%tests% tests, %assertions% assertions, %time% s'|trans({'%tests%': s.tests, '%assertions%': s.assertions, '%time%': s.time}) }}{% endif %}
+		</p>
+		{% if not run.done %}
+			<div class="flash success">{{ run.status == 'queued' ? 'En file d\'attente…'|trans : 'Les tests tournent…'|trans }} {{ 'Cette page se recharge toute seule.'|trans }}</div>
+		{% endif %}
+		{% if s.tests is defined %}
+			<dl class="stats">
+				<div><dt>{{ 'Réussis'|trans }}</dt><dd style="color: var(--green)">{{ s.tests - s.failures - s.errors - s.skipped }}</dd></div>
+				<div><dt>{{ 'Échecs'|trans }}</dt><dd style="color: {{ s.failures ? 'var(--red)' : 'inherit' }}">{{ s.failures }}</dd></div>
+				<div><dt>{{ 'Erreurs'|trans }}</dt><dd style="color: {{ s.errors ? 'var(--red)' : 'inherit' }}">{{ s.errors }}</dd></div>
+				<div><dt>{{ 'Ignorés'|trans }}</dt><dd>{{ s.skipped }}</dd></div>
+			</dl>
+			<ul class="test-cases">
+				{% for case in s.cases %}
+					<li class="{{ case.status }}">
+						<span class="mark" aria-hidden="true">{{ {passed: '✔', failed: '✘', error: '✘', skipped: '○'}[case.status] }}</span>
+						<span><b>{{ case.name }}</b> <span class="faint">{{ case.class }} · {{ case.time }} s</span></span>
+						{% if case.message %}<pre class="code">{{ case.message }}</pre>{% endif %}
+					</li>
+				{% endfor %}
+			</ul>
+		{% endif %}
+		{% if run.done %}
+			<h2>{{ 'Sortie de PHPUnit'|trans }}</h2>
+			<pre class="code test-output">{{ run.output ?: '—' }}</pre>
+		{% endif %}
+		{% if runs|length > 1 %}
+			<h2>{{ 'Exécutions précédentes'|trans }}</h2>
+			{% include 'studio/_test_runs.html.twig' %}
+		{% endif %}
+	</div>
+</section>
+{% endblock %}

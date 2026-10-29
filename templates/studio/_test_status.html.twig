@@ -1,0 +1,2 @@
+{# a run's status as a badge #}
+<span class="badge {{ {passed: 'ready', failed: 'error', error: 'error', queued: 'creating', running: 'creating'}[status] }}">{{ {passed: 'réussi', failed: 'échec', error: 'erreur', queued: 'en attente', running: 'en cours'}[status]|trans }}</span>

@@ -55,6 +55,17 @@
 					</p>
 				</div>
 				{% endif %}
+				{% if project.publishedSha %}
+				<div class="panel">
+					<h2>{{ 'Tests (PHPUnit)'|trans }}</h2>
+					{% if has_tests %}
+						<form method="post" action="{{ path('studio_tests_run', {slug: project.slug}) }}" style="margin-bottom: 12px"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn primary small" type="submit">▶ {{ 'Lancer les tests'|trans }}</button></form>
+						{% if test_runs %}{% include 'studio/_test_runs.html.twig' with {runs: test_runs} %}{% endif %}
+					{% else %}
+						<p class="muted">{{ 'Pas encore de tests. Ajoutez au jeu un dossier <code>tests/</code> avec des classes PHPUnit 11 (<code>tests/ScoreTest.php</code>, <code>namespace Tests;</code>, le code du jeu est chargé tel quel), poussez : ils tournent ici, dans un bac à sable, sur la version publiée. <a href="%url%">Comment faire</a>'|trans({'%url%': path('docs_page', {page: 'tests'})|e})|raw }}</p>
+					{% endif %}
+				</div>
+				{% endif %}
 				<div class="panel">
 					<h2>{{ 'Notes et tâches (privé)'|trans }}</h2>
 					<p class="muted">{{ 'Tenues par votre Claude (MCP : save_note, add_todos, update_todos) : l\'état d\'avancement du jeu et ce qu\'il reste à faire. Vous seul les voyez.'|trans }}</p>

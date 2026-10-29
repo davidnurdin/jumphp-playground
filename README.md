@@ -14,6 +14,9 @@ navigateur.
 - **Avis des joueurs** sur chaque jeu : commentaires, boîte à idées, problèmes. Tout le monde peut écrire ; un
   message anonyme n'est visible (de tous) qu'une fois validé par l'auteur du jeu, celui d'un connecté paraît tout
   de suite avec sa photo et un lien vers son profil.
+- **Tests PHPUnit des jeux** (le dossier `tests/` d'un jeu) lancés depuis le Studio ou par le Claude du créateur
+  (MCP `run_tests`), dans le service `tester` (`docker/tester`) : pas de réseau, PHPUnit sous `nobody`, temps et
+  mémoire limités ; il ne voit que le volume `tests` (pas de secret ni de fichier privé). Résultats test par test.
 - **Pages développeur** (`/dev/<login>`) : ses jeux, ses chiffres, les derniers messages écrits et reçus.
 - **Bac à sable** (`/bac-a-sable`) : l'éditeur sans compte, sur hello-world ou n'importe quel jeu (brouillons
   liés à un cookie signé, gardés 30 jours, pas de push).

@@ -1,0 +1,10 @@
+{# a game's last test runs #}
+<table class="files">
+	{% for r in runs %}
+		<tr>
+			<td><a href="{{ path('studio_tests', {slug: project.slug, id: r.id}) }}">#{{ r.id }}</a> {% include 'studio/_test_status.html.twig' with {status: r.status} %}</td>
+			<td>{% if r.summary.tests is defined %}{{ '%passed% / %tests% réussis'|trans({'%passed%': r.summary.tests - r.summary.failures - r.summary.errors - r.summary.skipped, '%tests%': r.summary.tests}) }}{% endif %}</td>
+			<td class="size"><code>{{ r.sha|slice(0, 7) }}</code> · {{ r.createdAt|date('d/m H:i') }}</td>
+		</tr>
+	{% endfor %}
+</table>

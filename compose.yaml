@@ -48,6 +48,22 @@ services:
     command: ["node", "/shooter/server.cjs"]
     restart: unless-stopped
     depends_on: [app]
+  # the games' PHPUnit tests, in a sandbox: no network, nobody, limits (docker/tester/runner.php)
+  tester:
+    build: { context: ./docker/tester }
+    image: jumphp-playground-tester:dev
+    network_mode: none
+    init: true
+    read_only: true
+    tmpfs: ["/sandbox:size=1g", "/tmp:size=64m"]
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER, KILL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1
+    volumes: ["./var/tests:/tests"]
+    restart: unless-stopped
   db:
     image: mariadb:11.4
     environment:
