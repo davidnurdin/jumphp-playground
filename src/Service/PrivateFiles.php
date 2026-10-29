@@ -57,6 +57,46 @@ final class PrivateFiles
         return $clean;
     }
 
+    /**
+     * Adds every file of a zip archive under $folder (its paths kept); their clean paths go into $added (also
+     * those before a refused one).
+     * @param list<string> $added
+     */
+    public function addArchive(Project $project, string $folder, string $zipFile, array &$added): void
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($zipFile, \ZipArchive::RDONLY) !== true) {
+            throw new ProjectException('Archive zip illisible.');
+        }
+        $temp = (string)tempnam(sys_get_temp_dir(), 'priv');
+        try {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                $name = (string)($stat['name'] ?? '');
+                if ($name === '' || str_ends_with($name, '/') || str_starts_with($name, '__MACOSX/')) {
+                    continue;
+                }
+                $path = trim($folder . '/' . $name, '/');
+                if ($stat['size'] > self::MAX_FILE) {
+                    throw new ProjectException('%path% : %max% Mo au plus par fichier.', ['%path%' => $path, '%max%' => intdiv(self::MAX_FILE, 1048576)]);
+                }
+                $in = $zip->getStreamIndex($i);
+                $out = fopen($temp, 'w');
+                if (!$in || !$out) {
+                    throw new ProjectException('Archive zip illisible.');
+                }
+                // never more than a file's limit, whatever the archive announces
+                stream_copy_to_stream($in, $out, self::MAX_FILE + 1);
+                fclose($in);
+                fclose($out);
+                $added[] = $this->add($project, $path, $temp);
+            }
+        } finally {
+            $zip->close();
+            @unlink($temp);
+        }
+    }
+
     public function remove(Project $project, string $path): void
     {
         $index = $this->index($project);

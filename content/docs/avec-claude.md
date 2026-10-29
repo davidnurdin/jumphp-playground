@@ -56,6 +56,7 @@ commande à lancer pour que Claude s'y mette.
 | `update_project` | titre, description, catégorie, visible ou non dans l'annuaire |
 | `sync_project` | publier maintenant le dernier commit |
 | `import_project` | publier un dépôt JumPHP existant |
+| `list_private_files`, `upload_private_files`, `remove_private_files` | les fichiers privés du jeu (données d'un jeu original : dans aucun dépôt) ; `upload_private_files` donne une adresse d'envoi pour `curl` (un fichier, plusieurs ou un zip), valable 2 h |
 | `list_games`, `list_game_files`, `read_game_file` | lire les jeux publiés (s'inspirer, comprendre) |
 
 Le type de jeu `cpc` fait travailler Claude avec [dsk2jumphp](/docs/remake-amstrad) pour un remake Amstrad.

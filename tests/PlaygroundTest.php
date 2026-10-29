@@ -125,6 +125,33 @@ final class PlaygroundTest extends WebTestCase
         self::assertStringContainsString('the game', $file['result']['structuredContent']['content']);
         $bad = $call(['jsonrpc' => '2.0', 'id' => 4, 'method' => 'tools/call', 'params' => ['name' => 'read_game_file', 'arguments' => ['slug' => 'test-game', 'path' => '../../manifest.json']]]);
         self::assertTrue($bad['result']['isError']);
+
+        // private files: a signed URL for curl (one file, a zip archive), listed, removed
+        $tool = fn (string $name, array $arguments) => $call(['jsonrpc' => '2.0', 'id' => 6, 'method' => 'tools/call', 'params' => ['name' => $name, 'arguments' => $arguments]])['result'];
+        $url = $tool('upload_private_files', ['slug' => 'test-game'])['structuredContent']['url'];
+        $data = tempnam(sys_get_temp_dir(), 'sqz');
+        file_put_contents($data, 'original game data');
+        $this->client->getCookieJar()->clear();
+        $this->client->request('POST', $url, ['path' => 'assets/data/LEVEL0.SQZ'], ['file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($data, 'LEVEL0.SQZ', null, null, true)]);
+        self::assertResponseIsSuccessful();
+        $zipFile = tempnam(sys_get_temp_dir(), 'zip');
+        $zip = new \ZipArchive();
+        $zip->open($zipFile, \ZipArchive::OVERWRITE);
+        $zip->addFromString('music/theme.ogg', 'ogg');
+        $zip->addFromString('../escape', 'no');
+        $zip->close();
+        $this->client->request('POST', $url, ['folder' => 'assets'], ['archive' => new \Symfony\Component\HttpFoundation\File\UploadedFile($zipFile, 'data.zip', null, null, true)]);
+        self::assertResponseStatusCodeSame(400);
+        self::assertSame(['assets/music/theme.ogg'], json_decode((string)$this->client->getResponse()->getContent(), true)['added']);
+        $this->client->request('POST', $url . 'x', ['path' => 'a'], ['file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($data, 'a', null, null, true)]);
+        self::assertResponseStatusCodeSame(403);
+        $listed = $tool('list_private_files', ['slug' => 'test-game'])['structuredContent'];
+        self::assertSame(['assets/data/LEVEL0.SQZ', 'assets/music/theme.ogg'], array_column($listed['files'], 'path'));
+        self::assertTrue($tool('remove_private_files', ['slug' => 'test-game', 'paths' => ['nope']])['isError']);
+        $left = $tool('remove_private_files', ['slug' => 'test-game', 'paths' => ['assets/music/theme.ogg']])['structuredContent'];
+        self::assertSame(['assets/data/LEVEL0.SQZ'], array_column($left['files'], 'path'));
+        self::assertSame(0, $tool('remove_private_files', ['slug' => 'test-game', 'all' => true])['structuredContent']['count']);
+
         $call(['jsonrpc' => '2.0', 'id' => 5, 'method' => 'ping'], 'jph_wrong');
         self::assertResponseStatusCodeSame(401);
     }

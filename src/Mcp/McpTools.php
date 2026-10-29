@@ -6,12 +6,16 @@ use App\Entity\Project;
 use App\Entity\User;
 use App\Repository\CategoryRepository;
 use App\Repository\ProjectRepository;
+use App\Message\ShootProject;
 use App\Service\GameFiles;
+use App\Service\PrivateFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
 use App\Service\Publisher;
 use App\Service\Slugs;
+use App\Service\UploadToken;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * What the creator's Claude can do on the playground. It writes the game in a local clone of the project
@@ -26,8 +30,11 @@ final class McpTools
         private CategoryRepository $categories,
         private Publisher $publisher,
         private GameFiles $files,
+        private PrivateFiles $private,
+        private UploadToken $uploadTokens,
         private Slugs $slugs,
         private EntityManagerInterface $em,
+        private MessageBusInterface $bus,
         private string $appUrl,
     ) {
     }
@@ -52,6 +59,9 @@ To make a game for the user:
 4. git push, then sync_project: it publishes at once and returns errors and warnings (a commit with a PHP
    syntax error is not published). Fix and push again until it is "published".
 5. When the game is good: update_project with listed=true (it appears in the directory). Give the user the URL.
+Files the game needs that may not be public (the data or sounds of an original game): keep them out of git and
+send them as private files (upload_private_files gives a URL to send them to with curl); the game loads them
+like its own files, no repository, source page or fork holds them.
 Never put the MCP token or any secret in the repository.
 TXT;
     }
@@ -86,6 +96,13 @@ TXT;
                 'slug' => $slug,
                 'category' => ['type' => 'string'],
             ], ['repository', 'slug', 'category']),
+            $this->tool('list_private_files', 'A project\'s private files: files the game loads that are in no repository, source page or fork (the data of an original game). Paths are relative to the game folder.', ['slug' => $slug], ['slug'], true),
+            $this->tool('upload_private_files', 'A URL to send private files to (valid ' . intdiv(UploadToken::TTL, 3600) . ' hours), with curl from the user\'s computer: the answer gives the commands. One file, several, or a zip archive of a folder. At most ' . intdiv(PrivateFiles::MAX_FILE, 1048576) . ' MB per file, ' . intdiv(PrivateFiles::MAX_TOTAL, 1048576) . ' MB and ' . PrivateFiles::MAX_COUNT . ' files per game. A file sent again replaces the previous one.', ['slug' => $slug], ['slug']),
+            $this->tool('remove_private_files', 'Remove private files of a project (paths from list_private_files), or all of them.', [
+                'slug' => $slug,
+                'paths' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'paths in the game folder'],
+                'all' => ['type' => 'boolean', 'description' => 'true: remove every private file'],
+            ], ['slug']),
             $this->tool('list_games', 'The public games of the directory (for ideas, or to read how others did something).', [
                 'category' => ['type' => 'string'],
                 'search' => ['type' => 'string'],
@@ -132,6 +149,9 @@ TXT;
                 'sync_project' => $this->sync($args, $user),
                 'import_project' => $this->details($this->projectService->import($user, $this->string($args, 'repository'),
                     $this->string($args, 'slug'), $this->category($args), $this->projectService->token($user))),
+                'list_private_files' => $this->privateFiles($this->owned($args, $user)),
+                'upload_private_files' => $this->uploadUrl($args, $user),
+                'remove_private_files' => $this->removePrivate($args, $user),
                 'list_games' => $this->games($args),
                 'list_game_files' => $this->gameFiles($args),
                 'read_game_file' => $this->readFile($args),
@@ -184,6 +204,64 @@ TXT;
         }
         $result = $this->publisher->sync($project);
         return $result->toArray() + ['page' => $this->projectService->pageUrl($project->getSlug()), 'play' => $this->playUrl($project)];
+    }
+
+    private function privateFiles(Project $project): array
+    {
+        $index = $this->private->index($project);
+        $files = [];
+        foreach ($index as $path => $file) {
+            $files[] = ['path' => $path, 'size' => $file['size'], 'hash' => $file['hash']];
+        }
+        return [
+            'slug' => $project->getSlug(),
+            'files' => $files,
+            'count' => count($files),
+            'size' => array_sum(array_column($index, 'size')),
+            'limits' => ['file' => PrivateFiles::MAX_FILE, 'total' => PrivateFiles::MAX_TOTAL, 'count' => PrivateFiles::MAX_COUNT],
+        ];
+    }
+
+    private function uploadUrl(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        $url = rtrim($this->appUrl, '/') . '/upload/' . $this->uploadTokens->make((int)$project->getId(), (int)$user->getId());
+        return [
+            'slug' => $project->getSlug(),
+            'url' => $url,
+            'expires_in' => UploadToken::TTL,
+            'one_file' => "curl -fsS -F path=assets/data/LEVEL0.SQZ -F file=@/local/LEVEL0.SQZ '$url'",
+            'several_files' => "curl -fsS -F 'path[]=assets/data/A.BIN' -F 'file[]=@/local/A.BIN' -F 'path[]=assets/sfx/b.ogg' -F 'file[]=@/local/b.ogg' '$url'",
+            'zip_of_a_folder' => "(cd /local/data && zip -qr /tmp/data.zip .) && curl -fsS -F folder=assets/data -F archive=@/tmp/data.zip '$url'",
+            'notes' => 'path = the file\'s path in the game folder (as the game loads it). One request at most ' . intdiv(PrivateFiles::MAX_FILE, 1048576) . ' MB: split bigger sets into several requests. '
+                . 'The answer is JSON: added paths, or error. The game loads them at once (no push or sync needed); never commit them.',
+        ];
+    }
+
+    private function removePrivate(array $args, User $user): array
+    {
+        $project = $this->owned($args, $user);
+        if (!empty($args['all'])) {
+            $this->private->removeAll($project);
+        } else {
+            $paths = array_map('strval', (array)($args['paths'] ?? []));
+            if (!$paths) {
+                throw new McpToolError('Give paths (list_private_files) or all=true.');
+            }
+            $index = $this->private->index($project);
+            foreach ($paths as $path) {
+                if (!isset($index[(string)GameFiles::clean($path)])) {
+                    throw new McpToolError("No private file $path (list_private_files).");
+                }
+            }
+            foreach ($paths as $path) {
+                $this->private->remove($project, $path);
+            }
+        }
+        if ($project->isPublished() && (!$project->hasThumbnail() || $project->isShotThumbnail())) {
+            $this->bus->dispatch(new ShootProject((int)$project->getId(), true));
+        }
+        return $this->privateFiles($project);
     }
 
     private function games(array $args): array

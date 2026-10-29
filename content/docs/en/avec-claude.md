@@ -55,6 +55,7 @@ run to get Claude started on it.
 | `update_project` | title, description, category, visible or not in the directory |
 | `sync_project` | publish the latest commit now |
 | `import_project` | publish an existing JumPHP repository |
+| `list_private_files`, `upload_private_files`, `remove_private_files` | the game's private files (the data of an original game: in no repository); `upload_private_files` gives an upload address for `curl` (one file, several, or a zip), valid 2 hours |
 | `list_games`, `list_game_files`, `read_game_file` | read published games (get inspired, understand) |
 
 The `cpc` game type makes Claude work with [dsk2jumphp](/docs/remake-amstrad) for an Amstrad remake.
