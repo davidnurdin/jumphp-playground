@@ -11,6 +11,7 @@
 			{% include 'game/_install.html.twig' %}
 			{% include 'game/_share.html.twig' %}
 			<a class="btn small" href="{{ path('game_source', {slug: project.slug}) }}">{{ 'Sources'|trans }}</a>
+			<a class="btn small" href="{{ path('game_versions', {slug: project.slug}) }}" title="{{ 'Les anciennes versions du jeu'|trans }}">🕘 {{ 'Versions'|trans }}</a>
 			<a class="btn small" href="{{ path('game_edit', {slug: project.slug}) }}">{{ 'Éditer'|trans }}</a>
 			<a class="btn small" href="{{ project.repoUrl }}" rel="noopener">GitHub</a>
 			{% if project.isOwnedBy(app.user) %}<a class="btn small" href="{{ path('studio_project', {slug: project.slug}) }}">{{ 'Réglages'|trans }}</a>{% endif %}

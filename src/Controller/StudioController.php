@@ -49,11 +49,11 @@ final class StudioController extends AbstractController
     }
 
     #[Route('', name: 'studio', methods: ['GET'])]
-    public function index(#[CurrentUser] User $user, CommentRepository $comments, DraftRepository $drafts, SandboxShareRepository $shares): Response
+    public function index(Request $request, #[CurrentUser] User $user, CommentRepository $comments, DraftRepository $drafts, SandboxShareRepository $shares): Response
     {
         $counts = $drafts->countsOf($user);
         return $this->render('studio/index.html.twig', [
-            'projects' => $this->projects->ownedBy($user),
+            'projects' => $this->projects->ownedByPage($user, $request->query->getInt('page', 1)),
             'pending' => $comments->pendingByProject($user),
             // the games they changed in the online editor (or imported from the sandbox), not pushed yet
             'drafts' => array_map(fn ($p) => ['project' => $p, 'count' => $counts[$p->getId()]], $counts ? $this->projects->findBy(['id' => array_keys($counts)]) : []),
@@ -68,7 +68,7 @@ final class StudioController extends AbstractController
         $isPendingOnly = $request->query->get('filtre') === 'attente';
         $seen = $user->getNotificationsSeenAt();
         $response = $this->render('studio/notifications.html.twig', [
-            'messages' => $comments->notificationsOf($user, $isPendingOnly),
+            'messages' => $comments->notificationsOf($user, $isPendingOnly, $request->query->getInt('page', 1)),
             'pending' => array_sum($comments->pendingByProject($user)),
             'is_pending_only' => $isPendingOnly,
             'seen' => $seen,

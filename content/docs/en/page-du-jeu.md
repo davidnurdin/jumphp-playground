@@ -41,6 +41,9 @@ and failing that it **photographs the game** itself in a browser.
 - **Share**: the phone's share sheet, or social networks on computers;
 - players' **ratings** (1 to 5 stars, no account) and the play counter;
 - the **sources** and the online **editor**;
+- the **versions** (🕘): each commit that changed the game. Players always get the newest published version; an
+  older one can be played again, taken up in the sandbox, **restored** (its author: from their editor, “Send to
+  GitHub”) or **forked**;
 - players' **comments**, **idea box** and reported **issues**, with or without an account. Anonymous messages
   only show once you approve them. The **bell 🔔** at the top of the site counts the new messages on your games
   and those waiting for your approval; its page ([Notifications](/studio/notifications)) lists them all, with

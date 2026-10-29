@@ -23,7 +23,8 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * The games origin (PLAY_URL): where the games' code and sites run, with no session nor cookie of the portal.
  *   /<slug>/                the game's own web site (site/), else the game
- *   /<slug>/play/           the game: JumPHP's page with the shared engine /engine/<version>/ (remote mode)
+ *   /<slug>/play/           the game: JumPHP's page with the shared engine /engine/<version>/ (remote mode);
+ *                           ?version=<sha>: an older version of it (extracted first by the portal: Publisher::version())
  *   /<slug>/play/manifest.json, /<slug>/play/files/<path>   its files, one by one
  *   /<slug>/play/draft/<token>/<path>                      a user's draft (the online editor)
  *   /<slug>/play/private/<path>                            a file given by the owner, in no repository (PrivateFiles)
@@ -56,14 +57,19 @@ final class PlayController extends AbstractController
     public function game(string $slug, Request $request): Response
     {
         $project = $this->published($slug);
-        $engine = $this->runtimes->pick($project->getEngineVersion());
+        $sha = $this->version($project, $request);
+        $engine = $this->runtimes->pick($sha ? (string)($this->files->manifest($project, $sha)['engine'] ?? '') : $project->getEngineVersion());
         if (!$engine) {
             throw new NotFoundHttpException('No engine');
         }
         $info = $project->getGameInfo();
         $runtime = $this->runtimes->info($engine);
         $draft = (string)$request->query->get('draft');
-        $manifest = 'manifest.json' . ($draft !== '' && $this->tokens->read($draft, $project->getId()) ? '?draft=' . rawurlencode($draft) : '');
+        $manifest = 'manifest.json' . match (true) {
+            $sha !== null => '?version=' . $sha,
+            $draft !== '' && $this->tokens->read($draft, $project->getId()) !== null => '?draft=' . rawurlencode($draft),
+            default => '',
+        };
         $hasIcon = (bool)$this->files->path($project, 'assets/icon.png');
         $game = array_intersect_key($info, array_flip(['id', 'title', 'version', 'description', 'width', 'height', 'online', 'lang', 'net_url', 'touch', 'controls']));
         $h = fn (string $s) => htmlspecialchars($s, ENT_QUOTES);
@@ -94,7 +100,7 @@ final class PlayController extends AbstractController
         $author = $this->author($token !== '' ? $this->tokens->read($token, $project->getId()) : null);
         $manifest = $author
             ? $this->files->manifestWithDrafts($project, $this->drafts->of($author, $project), $token)
-            : $this->files->manifest($project);
+            : $this->files->manifest($project, $this->version($project, $request));
         if (!$manifest) {
             throw new NotFoundHttpException();
         }
@@ -211,6 +217,13 @@ final class PlayController extends AbstractController
             throw new NotFoundHttpException();
         }
         return $project;
+    }
+
+    /** ?version=<sha>: an older version of the game, when the portal extracted it (else none: the newest) */
+    private function version(Project $project, Request $request): ?string
+    {
+        $sha = (string)$request->query->get('version');
+        return preg_match('/^[0-9a-f]{40}$/', $sha) && $sha !== $project->getPublishedSha() && $this->files->dir($project, $sha) ? $sha : null;
     }
 
     /** @return string[] the published versions, newest first */

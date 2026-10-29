@@ -136,7 +136,7 @@ final class CommentController extends AbstractController
         return $this->render('game/comments.html.twig', [
             'project' => $project,
             'section' => $section,
-            'comments' => $this->comments->shownTo($project, Comment::SECTIONS[$section], $user, $this->voters->of($request, null)),
+            'comments' => $this->comments->shownTo($project, Comment::SECTIONS[$section], $user, $this->voters->of($request, null), $request->query->getInt('page', 1)),
             'comment_form' => $form,
             'comment_error' => $error,
         ], new Response(status: $status));

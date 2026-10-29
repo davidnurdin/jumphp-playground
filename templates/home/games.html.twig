@@ -13,7 +13,7 @@
 {% block body %}
 <h1 class="sr-only">{{ 'Tous les jeux'|trans }}</h1>
 <div class="wall">
-	{% for game in games %}
+	{% for game in games.items %}
 		<a class="tile" href="{{ path('game', {slug: game.slug}) }}">
 			<div class="thumb">
 				{% if game.hasThumbnail %}
@@ -34,5 +34,6 @@
 		<p class="muted">{{ 'Aucun jeu pour l\'instant.'|trans }}</p>
 	{% endfor %}
 </div>
+{% include '_pager.html.twig' with {route: 'games', params: sort == 'note' ? {} : {tri: sort}, list: games} %}
 {% endblock %}
 {% block footer %}{% endblock %}

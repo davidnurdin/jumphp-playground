@@ -6,6 +6,7 @@ use App\Repository\CommentRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,7 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ProfileController extends AbstractController
 {
     #[Route('/dev/{login}', name: 'profile', requirements: ['login' => '[A-Za-z0-9][A-Za-z0-9-]{0,38}'], methods: ['GET'])]
-    public function show(string $login, UserRepository $users, ProjectRepository $projects, CommentRepository $comments): Response
+    public function show(string $login, Request $request, UserRepository $users, ProjectRepository $projects, CommentRepository $comments): Response
     {
         $user = $users->findOneBy(['login' => $login]) ?? throw new NotFoundHttpException();
         if ($user->getLogin() !== $login) {
@@ -25,7 +26,11 @@ final class ProfileController extends AbstractController
         $marks = array_filter($games, fn ($p) => $p->getRatingCount() > 0);
         return $this->render('profile/show.html.twig', [
             'dev' => $user,
-            'games' => $games,
+            // their games, by pages of 24 (the totals above count them all)
+            'games' => array_slice($games, ($page = min(max(1, $request->query->getInt('page', 1)), $pages = max(1, (int)ceil(count($games) / 24))) - 1) * 24, 24),
+            'game_count' => count($games),
+            'page' => $page,
+            'pages' => $pages,
             'plays' => array_sum(array_map(fn ($p) => $p->getPlays(), $games)),
             'rating' => $marks ? round(array_sum(array_map(fn ($p) => $p->getRating(), $marks)) / count($marks), 1) : null,
             'written' => $comments->latestBy($user),

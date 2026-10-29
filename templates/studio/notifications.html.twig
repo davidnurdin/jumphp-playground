@@ -14,9 +14,9 @@
 			<a class="btn small{{ not is_pending_only ? ' primary' }}" href="{{ path('studio_notifications') }}">{{ 'Tout'|trans }}</a>
 			<a class="btn small{{ is_pending_only ? ' primary' }}" href="{{ path('studio_notifications', {filtre: 'attente'}) }}">{{ 'À valider'|trans }}{% if pending %} ({{ pending }}){% endif %}</a>
 		</nav>
-		{% if messages %}
+		{% if messages.items %}
 			<ul class="notes-list">
-				{% for m in messages %}
+				{% for m in messages.items %}
 					{% set project = m.project %}
 					{% set isNew = seen is null or m.createdAt > seen %}
 					<li class="{{ isNew ? 'new' }}{{ not m.approved ? ' pending' }}">
@@ -48,6 +48,7 @@
 					</li>
 				{% endfor %}
 			</ul>
+			{% include '_pager.html.twig' with {route: 'studio_notifications', params: is_pending_only ? {filtre: 'attente'} : {}, list: messages} %}
 		{% else %}
 			<div class="panel empty-state"><p>{{ is_pending_only ? 'Aucun message à valider.'|trans : 'Pas encore de message sur vos jeux.'|trans }}</p></div>
 		{% endif %}

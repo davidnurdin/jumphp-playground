@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Versions de %title%'|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'versions'} %}
+<section class="section">
+	<div class="wrap">
+		<h2>🕘 {{ 'Versions'|trans }}</h2>
+		<p class="muted">{{ 'Chaque commit qui a changé le jeu. On joue toujours à la dernière version publiée ; ici, rejouez une ancienne version, ou reprenez-la dans le bac à sable ou votre éditeur (pour la renvoyer sur GitHub ou forker le jeu).'|trans }}</p>
+		{% if history.items %}
+			<ol class="versions">
+				{% for v in history.items %}
+					{% set isLive = v.sha == project.publishedSha %}
+					<li class="{{ isLive ? 'live' }}">
+						<div class="v-head">
+							<a href="{{ project.repoUrl }}/commit/{{ v.sha }}" rel="noopener"><code>{{ v.sha|slice(0, 7) }}</code></a>
+							<b>{{ v.subject ?: '—' }}</b>
+							{% if isLive %}<span class="badge ready">{{ 'en ligne'|trans }}</span>{% endif %}
+						</div>
+						<div class="faint">{{ v.author }} · {{ v.date|date(app.request.locale == 'en' ? 'm/d/Y H:i' : 'd/m/Y H:i') }}</div>
+						<div class="v-acts">
+							<a class="btn small primary" href="{{ isLive ? path('game_play', {slug: project.slug}) : path('game_version', {slug: project.slug, sha: v.sha}) }}">▶ {{ 'Jouer'|trans }}</a>
+							<a class="btn small" href="{{ project.repoUrl }}/tree/{{ v.sha }}" rel="noopener">{{ 'Sources'|trans }}</a>
+							{% if not isLive %}{% include 'game/_version_edit.html.twig' with {sha: v.sha} %}{% endif %}
+						</div>
+					</li>
+				{% endfor %}
+			</ol>
+			{% include '_pager.html.twig' with {route: 'game_versions', params: {slug: project.slug}, list: history} %}
+		{% else %}
+			<div class="panel empty-state"><p>{{ 'Pas encore d\'historique pour ce jeu.'|trans }}</p></div>
+		{% endif %}
+	</div>
+</section>
+{% endblock %}

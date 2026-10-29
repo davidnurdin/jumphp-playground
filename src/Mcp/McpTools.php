@@ -483,7 +483,7 @@ TXT;
                 'text' => $c->getBody(),
                 'approved' => $c->isApproved(),
                 'date' => $c->getCreatedAt()->format(DATE_ATOM),
-            ] + ($c->isIssue() ? ['resolved' => $c->isResolved()] : []), $this->comments->shownTo($project, $kind, $user, null));
+            ] + ($c->isIssue() ? ['resolved' => $c->isResolved()] : []), $this->comments->shownTo($project, $kind, $user, null, 1, 200)->items);
         }
         return $out;
     }
@@ -515,7 +515,7 @@ TXT;
     {
         $search = trim((string)($args['search'] ?? ''));
         $category = isset($args['category']) && $args['category'] !== '' ? $this->category($args) : null;
-        $games = $search !== '' ? $this->projects->search($search) : $this->projects->latest(48, $category);
+        $games = $search !== '' ? $this->projects->search($search, 1, 48)->items : $this->projects->latest(48, $category);
         return array_map(fn (Project $p) => [
             'slug' => $p->getSlug(), 'title' => $p->getTitle(), 'description' => $p->getDescription(),
             'category' => $p->getCategory()->getSlug(), 'author' => $p->getOwner()->getLogin(),

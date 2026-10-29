@@ -18,9 +18,9 @@
 				<p class="muted">{{ 'Votre Claude (Claude Code, sur votre machine) écrit le jeu à votre place. Donnez-lui accès au playground une fois pour toutes : <a href="%url%">créer mon jeton MCP</a>. Il lui faut aussi Docker (JumPHP teste et compile tout dans Docker).'|trans({'%url%': path('studio_mcp')|e})|raw }}</p>
 			</div>
 		{% endif %}
-		{% if projects %}
+		{% if projects.items %}
 			<table class="files">
-				{% for project in projects %}
+				{% for project in projects.items %}
 					<tr>
 						<td><a href="{{ path('studio_project', {slug: project.slug}) }}">{{ project.title }}</a> <span class="faint">/{{ project.slug }}</span></td>
 						<td><span class="badge {{ project.status }}">{{ project.status }}</span> {% if project.listed %}<span class="badge">{{ 'annuaire'|trans }}</span>{% endif %}
@@ -29,6 +29,7 @@
 					</tr>
 				{% endfor %}
 			</table>
+			{% include '_pager.html.twig' with {route: 'studio', list: projects} %}
 		{% else %}
 			<div class="panel empty-state">
 				<p>{{ 'Aucun jeu pour l\'instant.'|trans }}</p>

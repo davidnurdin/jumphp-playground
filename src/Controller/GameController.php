@@ -83,7 +83,7 @@ final class GameController extends AbstractController
         return $this->render('game/show.html.twig', [
             'project' => $project,
             'section' => $section,
-            'comments' => $project->isPublished() && !$project->hasSite() ? $comments->shownTo($project, Comment::SECTIONS[$section], $user, $voters->of($request, null)) : [],
+            'comments' => $project->isPublished() && !$project->hasSite() ? $comments->shownTo($project, Comment::SECTIONS[$section], $user, $voters->of($request, null)) : null,
             'my_rating' => $ratings->scoreOf($project, $voters->of($request, $user)),
             'fork_slug' => $user && !$project->isOwnedBy($user) ? $slugs->available(Slugs::fromTitle($project->getSlug() . '-' . $user->getLogin())) : null,
             'frame' => $project->hasSite() ? $this->play($project) . '/' : null,

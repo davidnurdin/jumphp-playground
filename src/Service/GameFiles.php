@@ -55,9 +55,10 @@ final class GameFiles
     }
 
     /** What the browser loads: the published files, and the owner's private files on top (PrivateFiles). */
-    public function manifest(Project $project): ?array
+    /** the manifest of the published version, or of the version $sha (Publisher::version()) */
+    public function manifest(Project $project, ?string $sha = null): ?array
     {
-        $dir = $this->dir($project);
+        $dir = $this->dir($project, $sha);
         $manifest = $dir ? json_decode((string)file_get_contents("$dir/manifest.json"), true) : null;
         if (!$manifest || !($private = $this->private->index($project))) {
             return $manifest;
@@ -114,9 +115,9 @@ final class GameFiles
      *
      * @return array<string, int> path => size
      */
-    public function tree(Project $project): array
+    public function tree(Project $project, ?string $sha = null): array
     {
-        $dir = $this->dir($project);
+        $dir = $this->dir($project, $sha);
         if (!$dir) {
             return [];
         }

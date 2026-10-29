@@ -16,6 +16,8 @@ use Symfony\Component\Yaml\Yaml;
  * var/storage/published/<id>/<sha>/ (GameFiles), checked (`php -l` only: no code of the game ever runs on the
  * server), its manifest, its web site and its picture. A broken commit is not published: the previous version
  * stays online and the errors are reported.
+ * Its history: every commit of the branch that changed the game (history()) can be played again, its folder
+ * extracted and checked the same way when it is first asked for (version()); the players get the newest.
  */
 final class Publisher
 {
@@ -345,12 +347,87 @@ final class Publisher
         ];
     }
 
-    /** keeps the published version and the one before (a page loaded just before still finds its files) */
+    /**
+     * The commits of the game, newest first, by pages: each one a version of the game that can be played again.
+     *
+     * @return array{items: list<array{sha: string, date: \DateTimeImmutable, subject: string, author: string}>, page: int, pages: int, total: int}
+     */
+    public function history(Project $project, int $page = 1, int $perPage = 20): array
+    {
+        $repo = $this->repoDir($project);
+        $branch = 'refs/heads/' . $project->getDefaultBranch();
+        $path = $project->getGameDir() === '.' ? '.' : $project->getGameDir();
+        $total = is_dir($repo) ? (int)trim((string)$this->shell->tryRun(['git', 'rev-list', '--count', $branch, '--', $path], $repo)) : 0;
+        $pages = max(1, (int)ceil($total / $perPage));
+        $page = min(max(1, $page), $pages);
+        $items = [];
+        if ($total > 0) {
+            $log = (string)$this->shell->tryRun(['git', 'log', '--format=%H%x1f%ct%x1f%an%x1f%s', '--skip=' . (($page - 1) * $perPage),
+                '-n', (string)$perPage, $branch, '--', $path], $repo);
+            foreach (array_filter(explode("\n", trim($log))) as $line) {
+                [$sha, $time, $author, $subject] = explode("\x1f", $line) + ['', '0', '', ''];
+                $items[] = ['sha' => $sha, 'date' => new \DateTimeImmutable('@' . $time), 'subject' => mb_substr($subject, 0, 200), 'author' => mb_substr($author, 0, 80)];
+            }
+        }
+        return ['items' => $items, 'page' => $page, 'pages' => $pages, 'total' => $total];
+    }
+
+    /**
+     * The folder of the game at one of its commits (published/<id>/<sha>/), extracted and checked the first time:
+     * an old version played, read or edited again. A commit not on the branch is none of the game's.
+     *
+     * @throws ProjectException what is wrong with that commit
+     */
+    public function version(Project $project, string $sha): string
+    {
+        if (!preg_match('/^[0-9a-f]{40}$/', $sha)) {
+            throw new ProjectException('Version inconnue.');
+        }
+        $final = "$this->storageDir/published/{$project->getId()}/$sha";
+        if (is_dir($final)) {
+            @touch($final);
+            return $final;
+        }
+        $repo = $this->repoDir($project);
+        if (!is_dir($repo) || $this->shell->tryRun(['git', 'merge-base', '--is-ancestor', $sha, 'refs/heads/' . $project->getDefaultBranch()], $repo) === null) {
+            throw new ProjectException('Version inconnue.');
+        }
+        $lock = $this->locks->createLock('publish-' . $project->getId(), 600);
+        $lock->acquire(true);
+        $fs = new Filesystem();
+        $work = "$final.tmp-" . bin2hex(random_bytes(4));
+        try {
+            if (is_dir($final)) {
+                return $final;
+            }
+            $gameDir = $this->findGameDir($repo, $sha, $project->getGameDir())
+                ?? throw new ProjectException('Pas de jeu dans cette version.');
+            $fs->mkdir($work);
+            [$errors, , $manifest] = $this->extract($repo, $sha, $gameDir, $work);
+            if ($errors) {
+                throw new ProjectException('Cette version ne se publie pas : %errors%', ['%errors%' => implode(' ; ', array_slice($errors, 0, 3))]);
+            }
+            $version = trim((string)$this->shell->tryRun(['git', 'show', "$sha:VERSION"], $repo));
+            $manifest['engine'] = $this->runtimes->pick($version) ?? throw new ProjectException('Aucun moteur JumPHP pour cette version.');
+            file_put_contents("$work/manifest.json", json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $fs->rename($work, $final);
+            $this->prune($project);
+            return $final;
+        } finally {
+            $fs->remove($work);
+            $lock->release();
+        }
+    }
+
+    /**
+     * keeps the published version and the last ones used (the one before: a page loaded just before still finds
+     * its files; old versions played again): the others are extracted again when asked for
+     */
     private function prune(Project $project): void
     {
-        $dirs = glob("$this->storageDir/published/{$project->getId()}/*", GLOB_ONLYDIR) ?: [];
+        $dirs = array_filter(glob("$this->storageDir/published/{$project->getId()}/*", GLOB_ONLYDIR) ?: [], fn ($d) => !str_contains(basename($d), '.tmp-'));
         usort($dirs, fn ($a, $b) => filemtime($b) <=> filemtime($a));
-        foreach (array_slice($dirs, 2) as $dir) {
+        foreach (array_slice($dirs, 6) as $dir) {
             if (basename($dir) !== $project->getPublishedSha()) {
                 (new Filesystem())->remove($dir);
             }

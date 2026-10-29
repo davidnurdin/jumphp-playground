@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ '%title% (version %sha%)'|trans({'%title%': project.title, '%sha%': sha|slice(0, 7)}) }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body_class %}full{% endblock %}
+{% block body %}
+{% include 'game/_bar.html.twig' with {mode: 'play'} %}
+<div class="version-bar">
+	<span>🕘 {{ 'Ancienne version <code>%sha%</code> : vous ne jouez pas à la dernière.'|trans({'%sha%': sha|slice(0, 7)})|raw }}</span>
+	<a class="btn small primary" href="{{ path('game_play', {slug: project.slug}) }}">{{ 'Jouer à la dernière'|trans }}</a>
+	<a class="btn small" href="{{ path('game_versions', {slug: project.slug}) }}">{{ 'Toutes les versions'|trans }}</a>
+	{% include 'game/_version_edit.html.twig' %}
+</div>
+<iframe class="frame" src="{{ frame }}" title="{{ project.title }}" data-game-frame data-quit="{{ path('game_versions', {slug: project.slug}) }}" allow="fullscreen; gamepad; autoplay; clipboard-write; screen-wake-lock" allowfullscreen></iframe>
+{% endblock %}

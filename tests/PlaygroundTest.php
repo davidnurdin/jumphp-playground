@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Entity\Category;
+use App\Entity\Comment;
 use App\Entity\Project;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -577,6 +578,99 @@ final class PlaygroundTest extends WebTestCase
         $this->get(self::APP, '/studio/notifications');
         self::assertSelectorNotExists('.notes-list');
         self::assertSelectorNotExists('.bell .bell-count');
+    }
+
+    public function testListsByPages(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        for ($i = 1; $i <= 25; $i++) {
+            $this->em->persist(new Comment($this->project, "message $i", $this->user));
+        }
+        $this->em->flush();
+        $this->get(self::APP, '/test-game/commentaires');
+        self::assertCount(20, $this->client->getCrawler()->filter('.comment-list > li'));
+        self::assertSelectorExists('.pager a[rel=next][href="/test-game/commentaires?page=2#retours"]');
+        $this->get(self::APP, '/test-game/commentaires?page=2');
+        self::assertCount(5, $this->client->getCrawler()->filter('.comment-list > li'));
+        self::assertSelectorTextContains('.pager', 'Page 2 / 2');
+        // under the game: the first ones, and a link to the others
+        $this->get(self::APP, '/test-game');
+        self::assertSelectorTextContains('#retours', 'Voir les suivants (25 en tout)');
+        // a page past the end is the last one
+        $this->get(self::APP, '/test-game/commentaires?page=99');
+        self::assertSelectorTextContains('.pager', 'Page 2 / 2');
+    }
+
+    public function testOlderVersionsPlayedAndEdited(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        // the mirror of the game's repository: two commits that changed the game, one that did not
+        $git = sys_get_temp_dir() . '/jumphp-versions-' . bin2hex(random_bytes(4));
+        $fs = new Filesystem();
+        $run = function (string ...$command) use ($git): void {
+            $process = new \Symfony\Component\Process\Process($command, $git, ['GIT_AUTHOR_NAME' => 'tester', 'GIT_AUTHOR_EMAIL' => 'tester@example.test',
+                'GIT_COMMITTER_NAME' => 'tester', 'GIT_COMMITTER_EMAIL' => 'tester@example.test']);
+            $process->mustRun();
+        };
+        $fs->dumpFile("$git/games/test-game/config/game.yaml", "game:\n  id: test-game\n");
+        $fs->dumpFile("$git/games/test-game/src/Scene/PlayScene.php", "<?php\n// version one\n");
+        $run('git', 'init', '-q', '-b', 'main');
+        $run('git', 'add', '-A');
+        $run('git', 'commit', '-q', '-m', 'First version');
+        $first = trim((new \Symfony\Component\Process\Process(['git', 'rev-parse', 'HEAD'], $git))->mustRun()->getOutput());
+        $fs->dumpFile("$git/README.md", "not the game\n");
+        $run('git', 'add', '-A');
+        $run('git', 'commit', '-q', '-m', 'Readme');
+        $fs->dumpFile("$git/games/test-game/src/Scene/PlayScene.php", "<?php\n// version two\n");
+        $fs->dumpFile("$git/games/test-game/src/Entity/New.php", "<?php\n// added later\n");
+        $run('git', 'add', '-A');
+        $run('git', 'commit', '-q', '-m', 'Second version');
+        $mirror = static::getContainer()->get(\App\Service\Publisher::class)->repoDir($this->project);
+        $fs->mkdir(dirname($mirror));
+        (new \Symfony\Component\Process\Process(['git', 'clone', '-q', '--mirror', $git, $mirror]))->mustRun();
+        $fs->remove($git);
+        // the published files are the second version
+        $published = static::getContainer()->getParameter('app.storage_dir') . "/published/{$this->project->getId()}/" . self::SHA . '/game';
+        $fs->dumpFile("$published/src/Scene/PlayScene.php", "<?php\n// version two\n");
+        $fs->dumpFile("$published/src/Entity/New.php", "<?php\n// added later\n");
+
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/test-game/versions');
+        self::assertCount(2, $crawler->filter('.versions > li'));
+        self::assertSelectorTextContains('.versions > li:last-child', 'First version');
+        // played again: extracted, checked, its own manifest and files on the games origin
+        $crawler = $this->client->request('GET', 'http://' . self::APP . "/test-game/versions/$first");
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString("/test-game/play/?version=$first", (string)$crawler->filter('iframe.frame')->attr('src'));
+        $this->get(self::PLAY, "/test-game/play/?version=$first");
+        self::assertStringContainsString("manifest.json?version=$first", (string)$this->client->getResponse()->getContent());
+        $this->get(self::PLAY, "/test-game/play/manifest.json?version=$first");
+        $files = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], null, 'path');
+        self::assertArrayNotHasKey('src/Entity/New.php', $files);
+        $this->get(self::PLAY, '/test-game/play/files/src/Scene/PlayScene.php?v=' . $files['src/Scene/PlayScene.php']['hash']);
+        self::assertStringContainsString('version one', $this->client->getInternalResponse()->getContent());
+        // the newest is still what everyone plays
+        $this->get(self::PLAY, '/test-game/play/manifest.json');
+        $now = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], null, 'path');
+        self::assertNotSame($files['src/Scene/PlayScene.php']['hash'], $now['src/Scene/PlayScene.php']['hash']);
+        // a commit that is none of the game's
+        $this->get(self::APP, '/test-game/versions/' . str_repeat('ab', 20));
+        self::assertResponseRedirects('/test-game/versions');
+
+        // edited in the sandbox: the files that differ from the published version
+        $crawler = $this->client->request('GET', 'http://' . self::APP . "/test-game/versions/$first");
+        $this->client->submit($crawler->selectButton('✏️ Bac à sable')->form());
+        self::assertResponseRedirects('/bac-a-sable/test-game');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', '2 fichier(s) diffèrent');
+        $api = 'http://' . self::APP . $crawler->filter('#editor')->attr('data-api');
+        $this->client->request('GET', "$api/tree", [], [], ['HTTP_X_CSRF_TOKEN' => $crawler->filter('#editor')->attr('data-csrf')]);
+        $states = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], 'state', 'path');
+        self::assertSame(['modified', 'deleted'], [$states['src/Scene/PlayScene.php'], $states['src/Entity/New.php']]);
+        // the owner restores it from their editor
+        $this->client->loginUser($this->user);
+        $crawler = $this->client->request('GET', 'http://' . self::APP . "/test-game/versions/$first");
+        $this->client->submit($crawler->selectButton('↩ Restaurer')->form());
+        self::assertResponseRedirects('/test-game/edit');
     }
 
     public function testPublicApi(): void

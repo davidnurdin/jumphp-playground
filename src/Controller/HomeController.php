@@ -48,7 +48,7 @@ final class HomeController extends AbstractController
     {
         $sort = (string)$request->query->get('tri', 'note');
         $sort = isset(ProjectRepository::SORTS[$sort]) ? $sort : 'note';
-        return $this->render('home/games.html.twig', ['games' => $this->projects->sorted($sort), 'sort' => $sort, 'sorts' => ProjectRepository::SORTS]);
+        return $this->render('home/games.html.twig', ['games' => $this->projects->sorted($sort, $request->query->getInt('page', 1)), 'sort' => $sort, 'sorts' => ProjectRepository::SORTS]);
     }
 
     #[Route('/jeux', name: 'games_fr', methods: ['GET'])]
@@ -88,7 +88,7 @@ final class HomeController extends AbstractController
         $q = mb_substr(trim((string)$request->query->get('q')), 0, 80);
         return $this->render('home/search.html.twig', [
             'q' => $q,
-            'games' => $q !== '' ? $this->projects->search($q) : [],
+            'games' => $q !== '' ? $this->projects->search($q, $request->query->getInt('page', 1)) : null,
             'categories' => $this->categories->ordered(),
         ]);
     }

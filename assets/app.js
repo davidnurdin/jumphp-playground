@@ -8,14 +8,16 @@ const T = document.documentElement.lang === 'en' ? {
 	sending: (n, total, name) => `Uploading ${n} / ${total}: ${name}…`,
 	error: (status, name) => `Error ${status} on ${name}`,
 	sent: (n) => `${n} file(s) uploaded.`,
-	play: 'Play', pause: 'Pause', running: 'running…', open: 'Open the frame',
+	play: 'Play', pause: 'Pause', running: 'running…', open: 'Watch it full screen, frame by frame',
+	prev: 'Previous frame (←)', next: 'Next frame (→)', close: 'Close (Esc)', speed: 'Speed',
 } : {
 	copied: 'Copié !', linkCopied: 'Lien copié !', copyLink: 'Copier le lien',
 	thanks: (score) => `Merci ! Votre note : ${score} / 5`,
 	sending: (n, total, name) => `Envoi ${n} / ${total} : ${name}…`,
 	error: (status, name) => `Erreur ${status} sur ${name}`,
 	sent: (n) => `${n} fichier(s) envoyé(s).`,
-	play: 'Lire', pause: 'Pause', running: 'en cours…', open: 'Ouvrir l\'image',
+	play: 'Lire', pause: 'Pause', running: 'en cours…', open: 'Voir en plein écran, image par image',
+	prev: 'Image précédente (←)', next: 'Image suivante (→)', close: 'Fermer (Échap)', speed: 'Vitesse',
 };
 
 document.addEventListener('click', (event) => {
@@ -179,11 +181,83 @@ if (filmsBlock) {
 	const marks = { passed: '✔', failed: '✘', error: '✘', skipped: '○', run: '⏳' };
 	const cards = new Map();
 
+	// the full screen player of one film: frame by frame (← →, the slider), play / pause (space), speed, Esc
+	const theater = (() => {
+		const box = document.createElement('dialog');
+		box.className = 'theater';
+		box.innerHTML = '<div class="theater-head"><span class="mark"></span> <b></b><button class="btn small" type="button" data-close></button></div>'
+			+ '<div class="theater-pic"><img alt=""></div>'
+			+ '<div class="theater-ctrl"><button class="btn" type="button" data-first>⏮</button><button class="btn" type="button" data-prev>◀</button>'
+			+ '<button class="btn primary" type="button" data-play></button><button class="btn" type="button" data-next>▶</button><button class="btn" type="button" data-last>⏭</button>'
+			+ '<input type="range" min="1"><span class="count"></span>'
+			+ '<label class="faint"><span></span> <select><option value="3">¼×</option><option value="6">½×</option><option value="12" selected>1×</option><option value="24">2×</option></select></label></div>';
+		document.body.append(box);
+		const q = (sel) => box.querySelector(sel);
+		let card = null;
+		let at = 1;
+		let isPlaying = false;
+		let timer = null;
+		q('[data-close]').textContent = '✕';
+		q('[data-close]').title = T.close;
+		q('[data-prev]').title = T.prev;
+		q('[data-next]').title = T.next;
+		q('label span').textContent = T.speed;
+		const frames = () => card.film.frames;
+		const draw = () => {
+			at = Math.min(Math.max(1, at), frames());
+			q('img').src = frameUrl(card.film.n, at);
+			q('input').max = frames();
+			q('input').value = at;
+			q('.count').textContent = `${at} / ${frames()}`;
+			q('[data-play]').textContent = isPlaying ? '⏸' : '▶';
+			q('[data-play]').title = isPlaying ? T.pause : T.play;
+		};
+		const stop = () => { isPlaying = false; clearInterval(timer); timer = null; draw(); };
+		const play = () => {
+			isPlaying = true;
+			clearInterval(timer);
+			if (at >= frames()) at = 1;
+			timer = setInterval(() => { at = at >= frames() ? 1 : at + 1; draw(); }, 1000 / Number(q('select').value));
+			draw();
+		};
+		const step = (to) => { stop(); at = to; draw(); };
+		q('[data-close]').addEventListener('click', () => box.close());
+		q('[data-play]').addEventListener('click', () => (isPlaying ? stop() : play()));
+		q('[data-prev]').addEventListener('click', () => step(at - 1));
+		q('[data-next]').addEventListener('click', () => step(at + 1));
+		q('[data-first]').addEventListener('click', () => step(1));
+		q('[data-last]').addEventListener('click', () => step(frames()));
+		q('input').addEventListener('input', () => step(Number(q('input').value)));
+		q('select').addEventListener('change', () => { if (isPlaying) play(); });
+		box.addEventListener('keydown', (event) => {
+			const keys = { ArrowLeft: () => step(at - 1), ArrowRight: () => step(at + 1), Home: () => step(1), End: () => step(frames()), ' ': () => (isPlaying ? stop() : play()) };
+			if (keys[event.key] && event.target.tagName !== 'SELECT') { event.preventDefault(); keys[event.key](); }
+		});
+		box.addEventListener('close', () => {
+			stop();
+			if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+		});
+		return {
+			open(which) {
+				card = which;
+				at = which.at;
+				box.className = `theater ${which.film.status}`;
+				q('.mark').textContent = which.el.querySelector('.mark').textContent;
+				q('b').textContent = which.film.label;
+				box.showModal();
+				box.requestFullscreen?.().catch(() => {});
+				stop();
+				q('[data-play]').focus();
+			},
+			// a film that grows (a test that runs): the player follows its length
+			refresh() { if (card && box.open) draw(); },
+		};
+	})();
+
 	const show = (card) => {
 		card.img.src = frameUrl(card.film.n, card.at);
 		card.range.value = card.at;
 		card.count.textContent = `${card.at} / ${card.film.frames}`;
-		card.link.href = card.img.src;
 	};
 	const draw = (films) => {
 		for (const film of films) {
@@ -198,6 +272,8 @@ if (filmsBlock) {
 				card = { el, film, at: 1, isPlaying: true, img: el.querySelector('img'), link: el.querySelector('a'),
 					range: el.querySelector('input'), count: el.querySelector('.film-ctrl span'), button: el.querySelector('button') };
 				card.link.title = T.open;
+				card.link.href = '#';
+				card.link.addEventListener('click', (event) => { event.preventDefault(); theater.open(card); });
 				card.button.addEventListener('click', () => {
 					card.isPlaying = !card.isPlaying;
 					card.button.textContent = card.isPlaying ? '⏸' : '▶';
@@ -226,6 +302,7 @@ if (filmsBlock) {
 			if (film.status === 'run') card.at = film.frames;
 			show(card);
 		}
+		theater.refresh();
 		filmsBlock.hidden = cards.size === 0 && filmsBlock.dataset.done === '1';
 	};
 	draw(JSON.parse(filmsBlock.dataset.initial || '[]'));

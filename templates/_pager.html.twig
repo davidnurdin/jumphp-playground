@@ -1,0 +1,10 @@
+{# the pages of a list (App\Repository\Paged): with route, params (the other query parameters), list, anchor #}
+{% if list.pages > 1 %}
+	{% set params = params ?? {} %}
+	{% set anchor = anchor ?? '' %}
+	<nav class="pager" aria-label="Pages">
+		{% if list.page > 1 %}<a class="btn small" rel="prev" href="{{ path(route, params + (list.page > 2 ? {page: list.page - 1} : {})) }}{{ anchor }}">← {{ 'Précédents'|trans }}</a>{% endif %}
+		<span class="muted">{{ 'Page %page% / %pages%'|trans({'%page%': list.page, '%pages%': list.pages}) }}</span>
+		{% if list.page < list.pages %}<a class="btn small" rel="next" href="{{ path(route, params + {page: list.page + 1}) }}{{ anchor }}">{{ 'Suivants'|trans }} →</a>{% endif %}
+	</nav>
+{% endif %}

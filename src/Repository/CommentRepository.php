@@ -24,11 +24,9 @@ class CommentRepository extends ServiceEntityRepository
 
     /**
      * A game's comments (or ideas, issues) as a visitor sees them, newest first: the approved ones, and those waiting for the owner
-     * when the visitor is the owner (all) or their anonymous writer (their own).
-     *
-     * @return Comment[]
+     * when the visitor is the owner (all) or their anonymous writer (their own). One page of them.
      */
-    public function shownTo(Project $project, string $kind, ?User $user, ?string $visitor): array
+    public function shownTo(Project $project, string $kind, ?User $user, ?string $visitor, int $page = 1, int $perPage = 20): Paged
     {
         $qb = $this->withAuthors()->where('m.project = :p')->andWhere('m.kind = :k')->setParameter('p', $project)->setParameter('k', $kind)->orderBy('m.createdAt', 'DESC')->addOrderBy('m.id', 'DESC');
         if (!$project->isOwnedBy($user)) {
@@ -37,7 +35,7 @@ class CommentRepository extends ServiceEntityRepository
                 $qb->setParameter('v', $visitor);
             }
         }
-        return $qb->setMaxResults(200)->getQuery()->getResult();
+        return Paged::of($qb, $page, $perPage);
     }
 
     /** @return array<int, int> project id => anonymous comments waiting, for the games of an owner */
@@ -67,17 +65,15 @@ class CommentRepository extends ServiceEntityRepository
 
     /**
      * The notifications of a game's owner: the messages (comments, ideas, issues) others left on their games,
-     * newest first; with $isPendingOnly, those waiting for their approval.
-     *
-     * @return Comment[]
+     * newest first, by pages; with $isPendingOnly, those waiting for their approval.
      */
-    public function notificationsOf(User $owner, bool $isPendingOnly = false, int $limit = 100): array
+    public function notificationsOf(User $owner, bool $isPendingOnly = false, int $page = 1, int $perPage = 30): Paged
     {
         $qb = $this->notifications($owner)->addSelect('p')->leftJoin('m.author', 'a')->addSelect('a');
         if ($isPendingOnly) {
             $qb->andWhere('m.approved = false');
         }
-        return $qb->orderBy('m.createdAt', 'DESC')->setMaxResults($limit)->getQuery()->getResult();
+        return Paged::of($qb->orderBy('m.createdAt', 'DESC')->addOrderBy('m.id', 'DESC'), $page, $perPage);
     }
 
     /** the bell's number: the messages new since the owner last looked, and those waiting for their approval */

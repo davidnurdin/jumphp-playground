@@ -42,6 +42,9 @@ jeu, et à défaut il **photographie le jeu** lui-même dans un navigateur.
 - **Partager** : la feuille de partage du téléphone, ou les réseaux sociaux sur ordinateur ;
 - **les notes** des joueurs (de 1 à 5 étoiles, sans compte) et le compteur de parties ;
 - **les sources** et l'**éditeur** en ligne ;
+- les **versions** (🕘) : chaque commit qui a changé le jeu. Les joueurs ont toujours la dernière version
+  publiée ; une ancienne se rejoue, se reprend dans le bac à sable, se **restaure** (son auteur : depuis son
+  éditeur, « Envoyer sur GitHub ») ou se **forke** ;
 - les **commentaires**, la **boîte à idées** et les **problèmes** signalés par les joueurs, avec ou sans compte.
   Les messages anonymes n'apparaissent qu'une fois validés par vous. La **cloche 🔔** en haut du site compte
   les nouveaux messages sur vos jeux et ceux qui attendent votre validation ; sa page

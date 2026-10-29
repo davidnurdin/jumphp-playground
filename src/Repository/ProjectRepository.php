@@ -27,12 +27,10 @@ class ProjectRepository extends ServiceEntityRepository
     public const SORTS = ['note' => 'les mieux notés', 'parties' => 'les plus joués', 'date' => 'les plus récents', 'nom' => 'par nom'];
 
     /**
-     * All the games of the directory, in an order of SORTS. By mark: the average pulled towards 3 by three
+     * The games of the directory, in an order of SORTS, by pages. By mark: the average pulled towards 3 by three
      * phantom votes, so that one 5-star mark does not beat many 4.5 ones.
-     *
-     * @return Project[]
      */
-    public function sorted(string $sort): array
+    public function sorted(string $sort, int $page = 1, int $perPage = 48): Paged
     {
         $qb = $this->listed();
         match ($sort) {
@@ -41,7 +39,7 @@ class ProjectRepository extends ServiceEntityRepository
             'nom' => $qb->orderBy('p.title', 'ASC'),
             default => $qb->orderBy('p.publishedAt', 'DESC'),
         };
-        return $qb->addOrderBy('p.publishedAt', 'DESC')->getQuery()->getResult();
+        return Paged::of($qb->addOrderBy('p.publishedAt', 'DESC')->addOrderBy('p.id', 'DESC'), $page, $perPage);
     }
 
     /** @return Project[] the games of the directory, newest first */
@@ -93,19 +91,24 @@ class ProjectRepository extends ServiceEntityRepository
         return (int)$qb->getQuery()->getSingleScalarResult();
     }
 
-    /** @return Project[] */
-    public function search(string $text, int $limit = 48): array
+    public function search(string $text, int $page = 1, int $perPage = 24): Paged
     {
-        return $this->listed()
+        return Paged::of($this->listed()
             ->andWhere('p.title LIKE :t OR p.description LIKE :t OR o.login LIKE :t')
             ->setParameter('t', '%' . addcslashes($text, '%_') . '%')
-            ->orderBy('p.publishedAt', 'DESC')->setMaxResults($limit)->getQuery()->getResult();
+            ->orderBy('p.publishedAt', 'DESC')->addOrderBy('p.id', 'DESC'), $page, $perPage);
     }
 
-    /** @return Project[] */
+    /** @return Project[] all of them (the MCP's list_projects); the studio shows them by pages (ownedByPage) */
     public function ownedBy(User $user): array
     {
         return $this->findBy(['owner' => $user], ['updatedAt' => 'DESC']);
+    }
+
+    public function ownedByPage(User $user, int $page, int $perPage = 30): Paged
+    {
+        return Paged::of($this->createQueryBuilder('p')->where('p.owner = :u')->setParameter('u', $user)
+            ->orderBy('p.updatedAt', 'DESC')->addOrderBy('p.id', 'DESC'), $page, $perPage);
     }
 
     /** @return Project[] */

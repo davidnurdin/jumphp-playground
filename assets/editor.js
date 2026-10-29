@@ -166,6 +166,7 @@ if (root) {
 		try {
 			const result = await api('PUT', '/file', { path: current.path, content: current.view.state.doc.toString() });
 			say(result.state === 'published' ? T.same : T.saved);
+			live();
 			const known = files.find((f) => f.path === current.path);
 			if (!known || known.state !== result.state) await loadTree();
 			$('btn-revert').disabled = result.state === 'published';
@@ -218,6 +219,23 @@ if (root) {
 	$('btn-preview').addEventListener('click', play);
 	$('btn-reload').addEventListener('click', play);
 	root.classList.add('no-preview');
+
+	// live: each change saved relaunches the game on the right (the engine stays in the browser's cache: a
+	// relaunch takes a fraction of a second); typing stays in the editor
+	const liveBox = $('live');
+	try { liveBox.checked = localStorage.getItem('jumphp-editor-live') !== '0'; } catch (e) { /* no storage */ }
+	liveBox.addEventListener('change', () => { try { localStorage.setItem('jumphp-editor-live', liveBox.checked ? '1' : '0'); } catch (e) { /* no storage */ } });
+	let isLiveReload = false;
+	function live() {
+		if (!liveBox.checked || root.classList.contains('no-preview')) return;
+		isLiveReload = true;
+		play().catch((e) => say(e.message));
+	}
+	addEventListener('message', (event) => {
+		if (event.source !== preview.contentWindow || event.data?.type !== 'jumphp:ready' || !isLiveReload) return;
+		isLiveReload = false;
+		current?.view?.focus();
+	});
 
 	$('btn-push')?.addEventListener('click', async () => {
 		await flush();

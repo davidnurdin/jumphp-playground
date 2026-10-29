@@ -31,9 +31,10 @@
 		</div>
 		<button class="btn primary" type="submit">{{ label.button|trans }}</button>
 	</form>
-	{% if comments %}
+	{% set list = comments %}
+	{% if list and list.items %}
 		<ol class="comment-list">
-			{% for comment in comments %}
+			{% for comment in list.items %}
 				<li class="comment{{ comment.approved ? '' : ' pending' }}{{ comment.resolved ? ' resolved' }}" id="commentaire-{{ comment.id }}">
 					{% if comment.author %}
 						<a class="avatar" href="{{ path('profile', {login: comment.author.login}) }}" tabindex="-1">{% if comment.author.avatarUrl %}<img src="{{ comment.author.avatarUrl }}&s=80" alt="" width="40" height="40" loading="lazy">{% else %}<span>{{ comment.author.login|first|upper }}</span>{% endif %}</a>
@@ -68,6 +69,11 @@
 				</li>
 			{% endfor %}
 		</ol>
+		{% if from == 'list' %}
+			{% include '_pager.html.twig' with {route: 'game_comments', params: {slug: project.slug, section: section}, list: list, anchor: '#retours'} %}
+		{% elseif list.pages > 1 %}
+			<p><a class="btn small" href="{{ path('game_comments', {slug: project.slug, section: section, page: 2}) }}#retours">{{ 'Voir les suivants (%count% en tout)'|trans({'%count%': list.total}) }} →</a></p>
+		{% endif %}
 	{% else %}
 		<p class="muted">{{ label.empty|trans }}</p>
 	{% endif %}

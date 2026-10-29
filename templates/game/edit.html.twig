@@ -57,7 +57,9 @@
 		</div></div>
 	</section>
 	<section class="ed-preview" aria-label="{{ 'Aperçu'|trans }}">
-		<div class="ed-head"><span class="path">{{ 'Aperçu avec vos modifications'|trans }}</span><button class="btn small" type="button" id="btn-reload">↻ {{ 'Relancer'|trans }}</button></div>
+		<div class="ed-head"><span class="path">{{ 'Aperçu avec vos modifications'|trans }}</span>
+			<label class="ed-live" title="{{ 'Chaque modification enregistrée relance le jeu tout de suite'|trans }}"><input type="checkbox" id="live" checked> ⚡ {{ 'En direct'|trans }}</label>
+			<button class="btn small" type="button" id="btn-reload">↻ {{ 'Relancer'|trans }}</button></div>
 		<iframe id="preview" title="{{ 'Aperçu du jeu'|trans }}" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
 	</section>
 </div>
