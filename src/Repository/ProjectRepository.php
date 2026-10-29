@@ -76,7 +76,7 @@ class ProjectRepository extends ServiceEntityRepository
         $total = (int)(clone $qb)->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
         foreach ($order as $field => $direction) {
             match ($field) {
-                'rating' => $qb->addSelect('(p.ratingSum + 9) / (p.ratingCount + 3) AS HIDDEN score')->addOrderBy('score', $direction),
+                'rating' => $qb->addSelect('(p.ratingSum + 9) / (p.ratingCount + 3) AS HIDDEN score')->addOrderBy('score', $direction)->addOrderBy('p.plays', $direction),
                 default => $qb->addOrderBy('p.' . $field, $direction),
             };
         }
