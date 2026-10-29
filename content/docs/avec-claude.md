@@ -37,11 +37,14 @@ Claude :
 1. crée le projet (`create_project`) : un dépôt GitHub avec JumPHP, un premier jeu et votre demande dans
    `BRIEF.md` ;
 2. le clone et écrit le jeu en suivant `AGENTS.md` (le contrat de JumPHP) ;
-3. le teste (`bin/jumphp test`), **regarde les captures d'écran** qu'il prend lui-même, et vérifie le build
-   navigateur ;
+3. **le teste en le faisant jouer, au fur et à mesure** : pour chaque mécanique qu'il écrit (un déplacement, un
+   saut, un ennemi, un bonus…), un [test de jeu](/docs/tests) qui la joue, lancé après chaque changement
+   (`bin/jumphp test`). Vous **voyez ces tests jouer en direct** dans [le panneau JumPHP](/docs/panneau-claude) ;
+   il **regarde aussi les captures d'écran** qu'il prend lui-même, et vérifie le build navigateur ;
 4. fait la page d'accueil du jeu (`site/`) avec ses vraies images ;
 5. pousse sur GitHub : le playground publie le jeu dans la minute (`sync_project` publie tout de suite et
-   renvoie les erreurs) ;
+   renvoie les erreurs), puis lance les tests sur le site (`run_tests`) : vous **revoyez chaque test de jeu
+   filmé** dans le Studio ;
 6. quand le jeu est prêt, le montre dans l'annuaire (`update_project listed=true`).
 
 Vous pouvez aussi créer le projet vous-même ([Nouveau jeu](/studio/nouveau)) : la page du projet donne la

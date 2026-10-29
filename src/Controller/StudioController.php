@@ -3,12 +3,15 @@
 namespace App\Controller;
 
 use App\Entity\Project;
+use App\Entity\TestRun;
 use App\Entity\User;
 use App\Message\ShootProject;
 use App\Repository\CategoryRepository;
 use App\Repository\CommentRepository;
+use App\Repository\DraftRepository;
 use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\SandboxShareRepository;
 use App\Repository\TestRunRepository;
 use App\Repository\TodoRepository;
 use App\Service\PrivateFiles;
@@ -20,6 +23,7 @@ use App\Service\TestRunner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,9 +49,33 @@ final class StudioController extends AbstractController
     }
 
     #[Route('', name: 'studio', methods: ['GET'])]
-    public function index(#[CurrentUser] User $user, CommentRepository $comments): Response
+    public function index(#[CurrentUser] User $user, CommentRepository $comments, DraftRepository $drafts, SandboxShareRepository $shares): Response
     {
-        return $this->render('studio/index.html.twig', ['projects' => $this->projects->ownedBy($user), 'pending' => $comments->pendingByProject($user)]);
+        $counts = $drafts->countsOf($user);
+        return $this->render('studio/index.html.twig', [
+            'projects' => $this->projects->ownedBy($user),
+            'pending' => $comments->pendingByProject($user),
+            // the games they changed in the online editor (or imported from the sandbox), not pushed yet
+            'drafts' => array_map(fn ($p) => ['project' => $p, 'count' => $counts[$p->getId()]], $counts ? $this->projects->findBy(['id' => array_keys($counts)]) : []),
+            'shares' => $shares->of($user),
+        ]);
+    }
+
+    /** What others said on the user's games (comments, ideas, issues), the ones waiting for approval first to act on. */
+    #[Route('/notifications', name: 'studio_notifications', methods: ['GET'])]
+    public function notifications(Request $request, #[CurrentUser] User $user, CommentRepository $comments): Response
+    {
+        $isPendingOnly = $request->query->get('filtre') === 'attente';
+        $seen = $user->getNotificationsSeenAt();
+        $response = $this->render('studio/notifications.html.twig', [
+            'messages' => $comments->notificationsOf($user, $isPendingOnly),
+            'pending' => array_sum($comments->pendingByProject($user)),
+            'is_pending_only' => $isPendingOnly,
+            'seen' => $seen,
+        ]);
+        $user->setNotificationsSeenAt(new \DateTimeImmutable());
+        $this->em->flush();
+        return $response;
     }
 
     #[Route('/nouveau', name: 'studio_new', methods: ['GET', 'POST'])]
@@ -167,12 +195,66 @@ final class StudioController extends AbstractController
     #[Route('/projet/{slug}/tests/{id}', name: 'studio_tests', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function testsShow(string $slug, int $id, #[CurrentUser] User $user, TestRunRepository $runs, TestRunner $tests): Response
     {
+        $run = $this->run($slug, $id, $user, $runs);
+        $project = $run->getProject();
+        $tests->refresh($run);
+        return $this->render('studio/tests.html.twig', ['project' => $project, 'run' => $run, 'runs' => $runs->latest($project, 10), 'films' => $this->films($run, $tests)]);
+    }
+
+    /** A run as it goes (the tests page asks every second while it runs): done or not, the films so far. */
+    #[Route('/projet/{slug}/tests/{id}/etat', name: 'studio_tests_state', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function testsState(string $slug, int $id, #[CurrentUser] User $user, TestRunRepository $runs, TestRunner $tests): JsonResponse
+    {
+        $run = $this->run($slug, $id, $user, $runs);
+        $tests->refresh($run);
+        return new JsonResponse(['done' => $run->isDone(), 'status' => $run->getStatus(), 'films' => $this->films($run, $tests)]);
+    }
+
+    /** A frame of a game test's film. */
+    #[Route('/projet/{slug}/tests/{id}/film/{n}/{frame}.png', name: 'studio_tests_frame', requirements: ['id' => '\d+', 'n' => '\d{3}', 'frame' => '\d{4}'], methods: ['GET'])]
+    public function testsFrame(string $slug, int $id, string $n, string $frame, #[CurrentUser] User $user, TestRunRepository $runs, TestRunner $tests): Response
+    {
+        $file = $tests->frame($this->run($slug, $id, $user, $runs), $n, $frame) ?? throw new NotFoundHttpException();
+        $response = new BinaryFileResponse($file, 200, ['Content-Type' => 'image/png', 'X-Content-Type-Options' => 'nosniff']);
+        $response->setPrivate();
+        $response->setMaxAge(86400);
+        return $response;
+    }
+
+    private function run(string $slug, int $id, User $user, TestRunRepository $runs): TestRun
+    {
         $project = $this->owned($slug, $user);
         $run = $runs->find($id);
         if (!$run || $run->getProject()->getId() !== $project->getId()) {
             throw new NotFoundHttpException();
         }
-        return $this->render('studio/tests.html.twig', ['project' => $project, 'run' => $tests->refresh($run), 'runs' => $runs->latest($project, 10)]);
+        return $run;
+    }
+
+    /**
+     * The filmed game tests of a run, with what PHPUnit said of each (run while it runs) and a readable name
+     * ("testThePaddleGoesDown": "The paddle goes down").
+     *
+     * @return list<array{n: string, name: string, label: string, frames: int, status: string, message: ?string}>
+     */
+    private function films(TestRun $run, TestRunner $tests): array
+    {
+        $cases = [];
+        foreach ((array)($run->getSummary()['cases'] ?? []) as $case) {
+            $cases[$case['class'] . '::' . $case['name']] = $case;
+        }
+        $films = [];
+        foreach ($tests->films($run) as $film) {
+            $case = $cases[$film['name']] ?? null;
+            $method = (string)preg_replace('/^.*::/', '', $film['name']);
+            $words = trim((string)preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', ' ', (string)preg_replace('/^test_?/', '', $method)));
+            $films[] = $film + [
+                'label' => ucfirst(mb_strtolower(str_replace('_', ' ', $words))) ?: $method,
+                'status' => $case['status'] ?? ($run->isDone() ? 'error' : 'run'),
+                'message' => $case['message'] ?? null,
+            ];
+        }
+        return $films;
     }
 
     /** One private file (assets/app.js sends them one by one): path = folder + name. */

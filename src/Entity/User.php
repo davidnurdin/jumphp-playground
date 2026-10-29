@@ -50,6 +50,10 @@ class User implements UserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastLoginAt = null;
 
+    /** the notifications (messages on their games) seen until then: the newer ones are new */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $notificationsSeenAt = null;
+
     public function __construct(int $githubId, string $login)
     {
         $this->githubId = $githubId;
@@ -58,6 +62,8 @@ class User implements UserInterface
     }
 
     public function getId(): ?int { return $this->id; }
+    public function getNotificationsSeenAt(): ?\DateTimeImmutable { return $this->notificationsSeenAt; }
+    public function setNotificationsSeenAt(\DateTimeImmutable $at): void { $this->notificationsSeenAt = $at; }
     public function getGithubId(): int { return $this->githubId; }
     public function getLogin(): string { return $this->login; }
     public function setLogin(string $login): void { $this->login = $login; }

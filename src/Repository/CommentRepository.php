@@ -65,6 +65,35 @@ class CommentRepository extends ServiceEntityRepository
             ->setParameter('u', $owner)->orderBy('m.createdAt', 'DESC')->setMaxResults($limit)->getQuery()->getResult();
     }
 
+    /**
+     * The notifications of a game's owner: the messages (comments, ideas, issues) others left on their games,
+     * newest first; with $isPendingOnly, those waiting for their approval.
+     *
+     * @return Comment[]
+     */
+    public function notificationsOf(User $owner, bool $isPendingOnly = false, int $limit = 100): array
+    {
+        $qb = $this->notifications($owner)->addSelect('p')->leftJoin('m.author', 'a')->addSelect('a');
+        if ($isPendingOnly) {
+            $qb->andWhere('m.approved = false');
+        }
+        return $qb->orderBy('m.createdAt', 'DESC')->setMaxResults($limit)->getQuery()->getResult();
+    }
+
+    /** the bell's number: the messages new since the owner last looked, and those waiting for their approval */
+    public function countNotifications(User $owner): int
+    {
+        $seen = $owner->getNotificationsSeenAt() ?? new \DateTimeImmutable('-30 days');
+        return (int)$this->notifications($owner)->select('COUNT(m.id)')->andWhere('m.createdAt > :seen OR m.approved = false')
+            ->setParameter('seen', $seen)->getQuery()->getSingleScalarResult();
+    }
+
+    private function notifications(User $owner): \Doctrine\ORM\QueryBuilder
+    {
+        return $this->createQueryBuilder('m')->join('m.project', 'p')->where('p.owner = :o')
+            ->andWhere('m.author IS NULL OR m.author != :o')->setParameter('o', $owner);
+    }
+
     /** how many comments came from an address since a moment (anti-flood) */
     public function countFrom(string $ipHash, \DateTimeImmutable $since): int
     {

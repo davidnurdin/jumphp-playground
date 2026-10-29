@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Notifications – studio JumPHP'|trans }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{% set kinds = {comment: ['💬', 'Commentaire'], idea: ['💡', 'Idée'], issue: ['🐞', 'Problème']} %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h1>🔔 {{ 'Notifications'|trans }}</h1>
+			<div class="actions"><a class="btn" href="{{ path('studio') }}">← {{ 'Mes jeux'|trans }}</a></div>
+		</div>
+		<p class="muted">{{ 'Ce que les joueurs écrivent sur vos jeux : commentaires, idées, problèmes. Les messages anonymes attendent votre validation avant d\'être visibles de tous.'|trans }}</p>
+		<nav class="tabs-inline">
+			<a class="btn small{{ not is_pending_only ? ' primary' }}" href="{{ path('studio_notifications') }}">{{ 'Tout'|trans }}</a>
+			<a class="btn small{{ is_pending_only ? ' primary' }}" href="{{ path('studio_notifications', {filtre: 'attente'}) }}">{{ 'À valider'|trans }}{% if pending %} ({{ pending }}){% endif %}</a>
+		</nav>
+		{% if messages %}
+			<ul class="notes-list">
+				{% for m in messages %}
+					{% set project = m.project %}
+					{% set isNew = seen is null or m.createdAt > seen %}
+					<li class="{{ isNew ? 'new' }}{{ not m.approved ? ' pending' }}">
+						<div class="who">
+							{% if m.author and m.author.avatarUrl %}<a href="{{ path('profile', {login: m.author.login}) }}"><img src="{{ m.author.avatarUrl }}&s=72" alt="" width="36" height="36"></a>{% else %}<span aria-hidden="true">{{ kinds[m.kind][0] }}</span>{% endif %}
+						</div>
+						<div>
+							<div class="head">
+								{{ kinds[m.kind][0] }} <b>{{ kinds[m.kind][1]|trans }}</b>
+								{{ 'de'|trans }} {% if m.author %}<a href="{{ path('profile', {login: m.author.login}) }}">{{ m.author.displayName }}</a>{% else %}{{ m.name ?: 'Anonyme'|trans }} <span class="faint">({{ 'anonyme'|trans }})</span>{% endif %}
+								{{ 'sur'|trans }} <a href="{{ path('game_comments', {slug: project.slug, section: m.section}) }}">{{ project.title }}</a>
+								<span class="faint">· {{ m.createdAt|date('d/m/Y H:i') }}</span>
+								{% if isNew %}<span class="badge creating">{{ 'nouveau'|trans }}</span>{% endif %}
+								{% if not m.approved %}<span class="badge error">{{ 'à valider'|trans }}</span>{% endif %}
+								{% if m.issue and m.resolved %}<span class="badge ready">{{ 'résolu'|trans }}</span>{% endif %}
+							</div>
+							<p class="body">{{ m.body }}</p>
+							<div class="acts">
+								{% if not m.approved %}
+									<form method="post" action="{{ path('game_comment_approve', {slug: project.slug, id: m.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ m.id) }}"><input type="hidden" name="from" value="notifications"><input type="hidden" name="filter" value="{{ is_pending_only ? 'pending' }}"><button class="btn small primary" type="submit">✓ {{ 'Valider'|trans }}</button></form>
+								{% endif %}
+								{% if m.issue and m.approved %}
+									<form method="post" action="{{ path('game_comment_resolve', {slug: project.slug, id: m.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ m.id) }}"><input type="hidden" name="from" value="notifications"><input type="hidden" name="filter" value="{{ is_pending_only ? 'pending' }}"><button class="btn small" type="submit">{{ m.resolved ? 'Rouvrir'|trans : 'Marquer résolu'|trans }}</button></form>
+								{% endif %}
+								<form method="post" action="{{ path('game_comment_remove', {slug: project.slug, id: m.id}) }}" onsubmit="return confirm({{ 'Supprimer ce message ?'|trans|json_encode }})"><input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ m.id) }}"><input type="hidden" name="from" value="notifications"><input type="hidden" name="filter" value="{{ is_pending_only ? 'pending' }}"><button class="btn small danger" type="submit">{{ 'Supprimer'|trans }}</button></form>
+								<a class="btn small" href="{{ path('game_comments', {slug: project.slug, section: m.section}) }}">{{ 'Voir la discussion'|trans }}</a>
+							</div>
+						</div>
+					</li>
+				{% endfor %}
+			</ul>
+		{% else %}
+			<div class="panel empty-state"><p>{{ is_pending_only ? 'Aucun message à valider.'|trans : 'Pas encore de message sur vos jeux.'|trans }}</p></div>
+		{% endif %}
+	</div>
+</section>
+{% endblock %}

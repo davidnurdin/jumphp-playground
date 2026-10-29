@@ -12,6 +12,10 @@
 		<span class="by">{{ 'Changez le code de <b>%title%</b>, cliquez sur « ▶ Tester » : le jeu tourne dans votre navigateur. Sans compte ; vos fichiers restent %days% jours dans ce navigateur.'|trans({'%title%': project.title|e, '%days%': constant('App\\Service\\Sandbox::PURGE_DAYS')})|raw }}</span>
 		<div class="actions">
 			<a class="btn small" href="{{ path('docs_page', {page: 'hello-world'}) }}">{{ 'Le tutoriel'|trans }}</a>
+			<form method="post" action="{{ path('sandbox_import', {slug: project.slug}) }}" data-flush>
+				<input type="hidden" name="_token" value="{{ csrf_token('sandbox-import') }}">
+				<button class="btn small" type="submit" title="{{ 'Vos fichiers modifiés vont dans votre éditeur de ce jeu (connecté avec GitHub) : de là, envoyez-les sur GitHub ou forkez le jeu.'|trans }}">📥 {{ app.user ? 'Importer dans mon espace'|trans : 'Me connecter et importer'|trans }}</button>
+			</form>
 			<a class="btn small primary" href="{{ path('studio_new') }}">{{ 'Créer mon jeu'|trans }}</a>
 		</div>
 	</div>
@@ -32,6 +36,7 @@
 			<button class="btn small" type="button" id="btn-revert" disabled>{{ 'Annuler mes modifs'|trans }}</button>
 			<button class="btn small" type="button" id="btn-delete" disabled>{{ 'Supprimer'|trans }}</button>
 			<button class="btn small" type="button" id="btn-preview">▶ {{ 'Tester'|trans }}</button>
+			<button class="btn small" type="button" id="btn-share">🔗 {{ 'Partager'|trans }}</button>
 			{% if sandbox %}
 				<button class="btn small" type="button" id="btn-reset">{{ 'Tout recommencer'|trans }}</button>
 			{% elseif can_push %}
@@ -70,6 +75,29 @@
 		<p class="muted">{{ 'Un commit sur <code>%repo%</code> (%branch%) avec vos fichiers modifiés ; le jeu est republié dans la minute.'|trans({'%repo%': project.repoFullName|e, '%branch%': project.defaultBranch|e})|raw }}</p>
 		<div class="field"><label for="push-message">{{ 'Message du commit'|trans }}</label><input id="push-message" value="Changes from the JumPHP playground editor" required></div>
 		<div class="actions"><button class="btn primary" value="ok">{{ 'Envoyer'|trans }}</button><button class="btn" value="cancel" formnovalidate>{{ 'Annuler'|trans }}</button></div>
+	</form>
+</dialog>
+<dialog id="dlg-share">
+	<form method="dialog">
+		<h2>🔗 {{ 'Partager par un lien'|trans }}</h2>
+		<p class="muted">{{ 'Un lien vers votre version du jeu, telle qu\'elle est maintenant : qui l\'ouvre y joue, la continue dans son bac à sable ou l\'importe dans son espace. Vos changements suivants n\'y sont pas.'|trans }}</p>
+		<div data-share-form>
+			<div class="field"><label for="share-title">{{ 'Titre (facultatif)'|trans }}</label><input id="share-title" maxlength="80" placeholder="{{ 'Ma démo de %title%'|trans({'%title%': project.title}) }}"></div>
+			<div class="field"><label for="share-duration">{{ 'Garder le lien'|trans }}</label>
+				<select id="share-duration">
+					<option value="day">{{ '1 jour'|trans }}</option>
+					<option value="week" selected>{{ '1 semaine'|trans }}</option>
+					<option value="month">{{ '1 mois'|trans }}</option>
+					<option value="forever">{{ 'Sans limite'|trans }}</option>
+				</select>
+			</div>
+		</div>
+		<div class="field" data-share-result hidden><label for="share-url">{{ 'Votre lien'|trans }}</label>
+			<div class="share-url"><input id="share-url" readonly><button class="btn" type="button" id="btn-share-copy">{{ 'Copier'|trans }}</button></div>
+			<div class="hint" id="share-expires"></div>
+		</div>
+		<p class="ed-status" id="share-status"></p>
+		<div class="actions"><button class="btn primary" type="button" id="btn-share-make">{{ 'Créer le lien'|trans }}</button><button class="btn" value="cancel" formnovalidate>{{ 'Fermer'|trans }}</button></div>
 	</form>
 </dialog>
 {% if not sandbox %}

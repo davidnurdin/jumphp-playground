@@ -3,9 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\Project;
+use App\Entity\SandboxShare;
 use App\Entity\User;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\SandboxShareRepository;
 use App\Service\DraftAuthor;
 use App\Service\DraftToken;
 use App\Service\GameFiles;
@@ -19,6 +21,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -153,6 +156,34 @@ final class EditorApiController extends AbstractController
         [$project, $who] = $this->open($slug, $request, $user);
         $token = $tokens->make($project->getId(), $who);
         return new JsonResponse(['url' => rtrim($this->playUrl, '/') . "/$slug/play/?draft=" . rawurlencode($token) . '&t=' . time()]);
+    }
+
+    /** A link to this session of the game (SandboxShare): a frozen copy of its changes, kept for the chosen time. */
+    #[Route('/projects/{slug}/share', name: 'api_share', methods: ['POST'])]
+    #[Route('/bac-a-sable/{slug}/share', name: 'sandbox_share_make', methods: ['POST'])]
+    public function share(string $slug, Request $request, #[CurrentUser] ?User $user, SandboxShareRepository $shares): JsonResponse
+    {
+        [$project, $who] = $this->open($slug, $request, $user);
+        $data = $request->toArray();
+        $duration = (string)($data['duration'] ?? '');
+        if (!array_key_exists($duration, SandboxShare::DURATIONS)) {
+            return new JsonResponse(['error' => 'duration'], 400);
+        }
+        if (!$this->drafts->of($who, $project)) {
+            return new JsonResponse(['error' => $this->translator->trans('Rien à partager : changez d\'abord le jeu.')], 400);
+        }
+        if ($shares->countFrom($who->key(), new \DateTimeImmutable('-1 day')) >= 30) {
+            return new JsonResponse(['error' => $this->translator->trans('Trop de liens aujourd\'hui : réessayez demain.')], 429);
+        }
+        $title = mb_substr(trim((string)($data['title'] ?? '')), 0, 80);
+        $share = new SandboxShare($project, $who->key(), $duration, $title, $user);
+        $this->em->persist($share);
+        $this->em->flush();
+        $this->drafts->copy($who, DraftAuthor::visitor($share->getVisitor()), $project);
+        return new JsonResponse([
+            'url' => $this->generateUrl('sandbox_shared', ['code' => $share->getCode()], UrlGeneratorInterface::ABSOLUTE_URL),
+            'expires' => $share->getExpiresAt()?->format(\DATE_ATOM),
+        ]);
     }
 
     #[Route('/projects/{slug}/push', name: 'api_push', methods: ['POST'])]

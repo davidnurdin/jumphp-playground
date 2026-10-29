@@ -31,7 +31,7 @@ final class PlaygroundTest extends WebTestCase
         $container = static::getContainer();
         $this->em = $container->get(EntityManagerInterface::class);
         $connection = $this->em->getConnection();
-        foreach (['test_run', 'comment', 'note', 'todo', 'rating', 'draft', 'project', 'app_user'] as $table) {
+        foreach (['test_run', 'sandbox_share', 'comment', 'note', 'todo', 'rating', 'draft', 'project', 'app_user'] as $table) {
             $connection->executeStatement("DELETE FROM $table");
         }
         $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => 'arcade']);
@@ -357,7 +357,7 @@ final class PlaygroundTest extends WebTestCase
         $testsDir = static::getContainer()->getParameter('app.tests_dir');
         (new Filesystem())->remove($testsDir);
         (new Filesystem())->dumpFile("$storage/published/{$this->project->getId()}/" . self::SHA . '/game/tests/ScoreTest.php', "<?php\n");
-        // a game test plays the game (SDL): left out of the sandbox, and said
+        // a game test plays the game (SDL, in the sandbox too): kept, and filmed
         (new Filesystem())->dumpFile("$storage/published/{$this->project->getId()}/" . self::SHA . '/game/tests/PaddleTest.php', "<?php\nfinal class PaddleTest extends \\JumPHP\\Testing\\GameTestCase {}\n");
         $this->get(self::APP, '/studio/projet/test-game');
         $this->client->submit($this->client->getCrawler()->selectButton('▶ Lancer les tests')->form());
@@ -366,22 +366,32 @@ final class PlaygroundTest extends WebTestCase
         // what the tester gets: the game, the engine and an autoloader of both
         self::assertFileExists("$testsDir/jobs/$id.json");
         self::assertFileExists("$testsDir/work/$id/tests/ScoreTest.php");
-        self::assertFileDoesNotExist("$testsDir/work/$id/tests/PaddleTest.php");
+        self::assertFileExists("$testsDir/work/$id/tests/PaddleTest.php");
         self::assertFileExists("$testsDir/work/$id/vendor/autoload_engine.php");
         self::assertStringContainsString("'App\\\\'", (string)file_get_contents("$testsDir/work/$id/vendor/autoload.php"));
         $this->client->followRedirect();
-        self::assertSelectorExists('meta[http-equiv="refresh"]');
+        self::assertSelectorExists('[data-films][data-done="0"]');
+        // the tester films the game tests as they run: the page asks for them
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        (new Filesystem())->dumpFile("$testsDir/films/$id/001/0001.png", $png);
+        (new Filesystem())->dumpFile("$testsDir/films/$id/index.json", json_encode(['tests' => [['n' => '001', 'name' => 'Tests\\PaddleTest::testThePaddleGoesDown', 'frames' => 1]]]));
+        $this->get(self::APP, "/studio/projet/test-game/tests/$id/etat");
+        $state = json_decode((string)$this->client->getResponse()->getContent(), true);
+        self::assertSame([false, 'The paddle goes down', 'run'], [$state['done'], $state['films'][0]['label'], $state['films'][0]['status']]);
+        $this->get(self::APP, "/studio/projet/test-game/tests/$id/film/001/0001.png");
+        self::assertResponseHeaderSame('Content-Type', 'image/png');
         // what it found
         file_put_contents("$testsDir/results/$id.json", json_encode(['status' => 'failed', 'output' => 'FAILURES!', 'summary' => [
             'tests' => 2, 'assertions' => 2, 'failures' => 1, 'errors' => 0, 'skipped' => 0, 'time' => 0.01, 'cases' => [
                 ['class' => 'Tests\\ScoreTest', 'name' => 'testAdds', 'status' => 'passed', 'message' => null, 'time' => 0.0],
                 ['class' => 'Tests\\ScoreTest', 'name' => 'testBonus', 'status' => 'failed', 'message' => 'Failed asserting that 3 is identical to 4.', 'time' => 0.0],
+                ['class' => 'Tests\\PaddleTest', 'name' => 'testThePaddleGoesDown', 'status' => 'passed', 'message' => null, 'time' => 0.5],
             ]]]));
         $this->get(self::APP, "/studio/projet/test-game/tests/$id");
-        self::assertSelectorNotExists('meta[http-equiv="refresh"]');
+        self::assertSelectorExists('[data-films][data-done="1"]');
+        self::assertStringContainsString('"status":"passed"', (string)$this->client->getCrawler()->filter('[data-films]')->attr('data-initial'));
         self::assertSelectorTextContains('.test-cases li.failed', 'Failed asserting that 3 is identical to 4.');
         self::assertSelectorTextContains('pre.test-output', 'FAILURES!');
-        self::assertSelectorTextContains('pre.test-output', '1 fichier(s) de tests de jeu');
         self::assertFileDoesNotExist("$testsDir/work/$id");
         // the owner's Claude sees the same; nobody else sees the page
         $this->client->request('POST', 'http://' . self::APP . '/mcp', [], [], [
@@ -469,6 +479,104 @@ final class PlaygroundTest extends WebTestCase
         self::assertArrayNotHasKey('src/Mine.php', $states);
         $this->client->request('POST', 'http://' . self::APP . str_replace('/tree', '/push', $api), [], [], ['HTTP_X_CSRF_TOKEN' => $other]);
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testSandboxSharedByALink(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/bac-a-sable/test-game');
+        $api = 'http://' . self::APP . $crawler->filter('#editor')->attr('data-api');
+        $token = $crawler->filter('#editor')->attr('data-csrf');
+        $call = function (string $method, string $path, ?array $body = null) use ($api, $token): array {
+            $this->client->request($method, $api . $path, [], [], ['HTTP_X_CSRF_TOKEN' => $token, 'CONTENT_TYPE' => 'application/json'], $body ? json_encode($body) : null);
+            return json_decode((string)$this->client->getResponse()->getContent(), true) ?? [];
+        };
+        // nothing changed: nothing to share
+        $call('POST', '/share', ['duration' => 'week']);
+        self::assertResponseStatusCodeSame(400);
+        $call('PUT', '/file', ['path' => 'src/Mine.php', 'content' => "<?php\n// v1\n"]);
+        $call('POST', '/share', ['duration' => 'never']);
+        self::assertResponseStatusCodeSame(400);
+        $share = $call('POST', '/share', ['duration' => 'week', 'title' => 'Ma démo']);
+        self::assertMatchesRegularExpression('#/bac-a-sable/partage/[A-Za-z0-9]{10}$#', $share['url']);
+        self::assertNotNull($share['expires']);
+        // the link is frozen: later changes are not in it
+        $call('PUT', '/file', ['path' => 'src/Mine.php', 'content' => "<?php\n// v2\n"]);
+
+        // someone else opens it: plays it, continues it in their sandbox
+        $this->client->getCookieJar()->clear();
+        $crawler = $this->client->request('GET', $share['url']);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Ma démo');
+        self::assertSelectorTextContains('.shared-files', 'src/Mine.php');
+        parse_str((string)parse_url((string)$crawler->filter('.shared-play iframe')->attr('src'), PHP_URL_QUERY), $query);
+        $this->get(self::PLAY, '/test-game/play/manifest.json?draft=' . rawurlencode($query['draft']));
+        $files = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], null, 'path');
+        $this->get(self::PLAY, '/test-game/play/' . $files['src/Mine.php']['url']);
+        self::assertStringContainsString('v1', (string)$this->client->getResponse()->getContent());
+        $this->client->submit($crawler->selectButton('✏️ Continuer dans mon bac à sable')->form());
+        self::assertResponseRedirects('/bac-a-sable/test-game');
+        $crawler = $this->client->followRedirect();
+        $this->client->request('GET', 'http://' . self::APP . $crawler->filter('#editor')->attr('data-api') . '/file?path=src/Mine.php', [], [], ['HTTP_X_CSRF_TOKEN' => $crawler->filter('#editor')->attr('data-csrf')]);
+        self::assertStringContainsString('v1', json_decode((string)$this->client->getResponse()->getContent(), true)['content']);
+
+        // signed in, into their space: their drafts of the game (the online editor, the studio)
+        $other = new User(1004, 'friend');
+        $this->em->persist($other);
+        $this->em->flush();
+        $this->client->loginUser($other);
+        $crawler = $this->client->request('GET', $share['url']);
+        $this->client->submit($crawler->selectButton('📥 Importer dans mon espace')->form());
+        self::assertResponseRedirects('/test-game/edit');
+        $this->get(self::APP, '/studio');
+        self::assertSelectorTextContains('body', 'En cours dans l\'éditeur');
+        self::assertSelectorTextContains('body', '1 fichier(s) modifié(s)');
+        // the sandbox of a signed-in user, imported the same way
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/bac-a-sable/test-game');
+        $this->client->submit($crawler->filter('form[data-flush]')->form());
+        self::assertResponseRedirects('/test-game/edit');
+
+        // the sandboxes are forgotten after a while, not the links; an expired link is gone with its files
+        $this->em->getConnection()->executeStatement("UPDATE draft SET updated_at = '2020-01-01' WHERE visitor IS NOT NULL");
+        $this->get(self::APP, '/bac-a-sable/test-game');
+        $this->get(self::APP, parse_url($share['url'], PHP_URL_PATH));
+        self::assertResponseIsSuccessful();
+        $this->em->getConnection()->executeStatement("UPDATE sandbox_share SET expires_at = '2020-01-01'");
+        $this->get(self::APP, parse_url($share['url'], PHP_URL_PATH));
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame(0, (int)$this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM sandbox_share'));
+        self::assertSame(0, (int)$this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM draft WHERE visitor IS NOT NULL'));
+    }
+
+    public function testNotifications(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        $this->client->request('POST', 'http://' . self::APP . '/test-game/idees', ['body' => 'Un mode deux joueurs', 'name' => 'Zoé'], [], ['HTTP_ORIGIN' => 'http://jumphp.test']);
+        $this->client->request('POST', 'http://' . self::APP . '/test-game/problemes', ['body' => 'Le son coupe'], [], ['HTTP_ORIGIN' => 'http://jumphp.test']);
+        // the owner's bell: 2; their page lists them, the anonymous ones to approve
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/studio');
+        self::assertSelectorTextContains('.bell .bell-count', '2');
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/studio/notifications?filtre=attente');
+        self::assertCount(2, $crawler->filter('.notes-list > li.pending.new'));
+        self::assertSelectorTextContains('.notes-list', 'Un mode deux joueurs');
+        $this->client->submit($crawler->filter('.notes-list > li')->last()->selectButton('✓ Valider')->form());
+        self::assertResponseRedirects('/studio/notifications?filtre=attente');
+        $crawler = $this->client->followRedirect();
+        self::assertCount(1, $crawler->filter('.notes-list > li'));
+        // seen: only the one still waiting counts
+        self::assertSelectorTextContains('.bell .bell-count', '1');
+        $this->get(self::APP, '/studio/notifications');
+        self::assertCount(2, $this->client->getCrawler()->filter('.notes-list > li'));
+        self::assertCount(0, $this->client->getCrawler()->filter('.notes-list > li.new'));
+        // nobody else's
+        $other = new User(1005, 'other');
+        $this->em->persist($other);
+        $this->em->flush();
+        $this->client->loginUser($other);
+        $this->get(self::APP, '/studio/notifications');
+        self::assertSelectorNotExists('.notes-list');
+        self::assertSelectorNotExists('.bell .bell-count');
     }
 
     public function testPublicApi(): void

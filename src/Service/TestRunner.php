@@ -14,11 +14,16 @@ use Symfony\Component\Filesystem\Filesystem;
  *   work/<id>/          the published game, and the engine's PHP code (its jumphp-vendor.pack) in vendor/
  *   jobs/<id>.json      a run to do; the tester renames it <id>.running while it runs
  *   results/<id>.json   what it found: status, output, summary
+ *   films/<id>/         the game tests filmed as they run (index.json, <n>/<frame>.png): replayed in the studio
+ * The game tests (JumPHP\Testing\GameTestCase) play the game in the sandbox (SDL without a window); an engine
+ * older than JumPHP\Testing runs them with the newest engine installed.
  */
 final class TestRunner
 {
     /** a run not started after this (the tester is down), or not finished after this, is a failure */
     private const STALE = 300;
+    /** the films of the last runs of a game are kept */
+    private const FILMS_KEPT = 5;
 
     private Filesystem $fs;
 
@@ -59,7 +64,7 @@ final class TestRunner
             }
         }
         // the folders are the playground's own (0755): the tests, run as nobody, cannot write there
-        $this->fs->mkdir(["$this->testsDir/jobs", "$this->testsDir/work", "$this->testsDir/results", "$this->testsDir/engines"], 0755);
+        $this->fs->mkdir(["$this->testsDir/jobs", "$this->testsDir/work", "$this->testsDir/results", "$this->testsDir/engines", "$this->testsDir/films"], 0755);
         $run = new TestRun($project, (string)$project->getPublishedSha());
         $this->em->persist($run);
         $this->em->flush();
@@ -67,19 +72,20 @@ final class TestRunner
             $work = "$this->testsDir/work/{$run->getId()}";
             $this->fs->mirror("$game/game", $work);
             $this->fs->remove(["$work/vendor", "$work/var", "$work/site"]);
-            $this->fs->mirror($this->engine((string)$project->getEngineVersion()), "$work/vendor");
+            $version = (string)$project->getEngineVersion();
+            $engine = $this->engine($version);
+            // the game tests (JumPHP\Testing\GameTestCase) need an engine that has them
+            if (!is_file("$engine/jumphp/engine/src/Testing/GameTestCase.php") && $this->hasGameTests("$work/tests")) {
+                foreach (array_reverse($this->runtimes->installed()) as $newer) {
+                    if (version_compare($newer, $version, '>') && is_file($this->engine($newer) . '/jumphp/engine/src/Testing/GameTestCase.php')) {
+                        $engine = $this->engine($newer);
+                        $this->fs->dumpFile("$work.note", "[i] Tests de jeu lancés avec le moteur JumPHP $newer (le jeu est en $version, sans JumPHP\Testing).");
+                        break;
+                    }
+                }
+            }
+            $this->fs->mirror($engine, "$work/vendor");
             $this->fs->dumpFile("$work/vendor/autoload.php", $this->autoload("$work/composer.json"));
-            // the game tests (JumPHP\Testing\GameTestCase) play the game: they need SDL, which the sandbox has not
-            $games = $this->withoutGameTests("$work/tests");
-            if (!glob("$work/tests/{,*/,*/*/}*Test.php", GLOB_BRACE)) {
-                $this->fs->remove($work);
-                $run->finish(TestRun::ERROR, "Seulement des tests de jeu ($games) : ils jouent le jeu et ont besoin de SDL, ils tournent avec bin/jumphp test sur votre ordinateur, pas ici.");
-                $this->em->flush();
-                return $run;
-            }
-            if ($games > 0) {
-                $this->fs->dumpFile("$work.note", "[!] $games fichier(s) de tests de jeu (GameTestCase) laissé(s) de côté : ils jouent le jeu et ont besoin de SDL, lancez-les avec bin/jumphp test.");
-            }
             $this->fs->dumpFile("$this->testsDir/jobs/{$run->getId()}.json", json_encode(['id' => $run->getId(), 'project' => $project->getSlug()]));
         } catch (\Throwable $e) {
             $this->fs->remove("$this->testsDir/work/{$run->getId()}");
@@ -87,20 +93,51 @@ final class TestRunner
             $this->em->flush();
         }
         $this->runs->prune($project);
+        foreach ($this->runs->latest($project, 30) as $i => $old) {
+            if ($i >= self::FILMS_KEPT) {
+                $this->fs->remove("$this->testsDir/films/{$old->getId()}");
+            }
+        }
         return $run;
     }
 
-    /** removes the game tests (they extend GameTestCase) of a tests folder: how many there were */
-    private function withoutGameTests(string $dir): int
+    /** a tests folder has game tests (they extend GameTestCase) */
+    private function hasGameTests(string $dir): bool
     {
-        $removed = 0;
         foreach (is_dir($dir) ? new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)) : [] as $file) {
             if ($file->isFile() && str_ends_with($file->getFilename(), '.php') && str_contains((string)file_get_contents($file->getPathname()), 'GameTestCase')) {
-                $this->fs->remove($file->getPathname());
-                $removed++;
+                return true;
             }
         }
-        return $removed;
+        return false;
+    }
+
+    /**
+     * The game tests of a run, filmed: each test (in the order they ran) with its name and its frames' URLs path
+     * (films/<id>/<n>/<frame>.png, served by film()). Grows while the run runs.
+     *
+     * @return list<array{n: string, name: string, frames: int}>
+     */
+    public function films(TestRun $run): array
+    {
+        $index = json_decode((string)@file_get_contents("$this->testsDir/films/{$run->getId()}/index.json"), true);
+        $films = [];
+        foreach ((array)($index['tests'] ?? []) as $test) {
+            if (preg_match('/^\d{3}$/', (string)($test['n'] ?? '')) && ($test['frames'] ?? 0) > 0) {
+                $films[] = ['n' => (string)$test['n'], 'name' => (string)($test['name'] ?? ''), 'frames' => (int)$test['frames']];
+            }
+        }
+        return $films;
+    }
+
+    /** a frame of a run's film: its file, or null */
+    public function frame(TestRun $run, string $n, string $frame): ?string
+    {
+        if (!preg_match('/^\d{3}$/', $n) || !preg_match('/^\d{4}$/', $frame)) {
+            return null;
+        }
+        $file = "$this->testsDir/films/{$run->getId()}/$n/$frame.png";
+        return is_file($file) ? $file : null;
     }
 
     /** What the tester found, if it is done; a run that waits too long fails. */

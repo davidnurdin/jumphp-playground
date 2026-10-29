@@ -35,6 +35,33 @@
 				<a class="btn primary big" href="{{ path('studio_new') }}">{{ 'Créer mon premier jeu'|trans }}</a>
 			</div>
 		{% endif %}
+		{% if drafts %}
+			<h2>{{ 'En cours dans l\'éditeur'|trans }}</h2>
+			<p class="muted">{{ 'Vos changements pas encore envoyés sur GitHub (faits dans l\'éditeur en ligne, ou importés du bac à sable) : à vous seul.'|trans }}</p>
+			<table class="files">
+				{% for d in drafts %}
+					<tr>
+						<td><a href="{{ path('game_edit', {slug: d.project.slug}) }}">{{ d.project.title }}</a> <span class="faint">/{{ d.project.slug }}</span></td>
+						<td>{{ '%count% fichier(s) modifié(s)'|trans({'%count%': d.count}) }}</td>
+						<td class="size"><a class="btn small" href="{{ path('game_edit', {slug: d.project.slug}) }}">{{ 'Ouvrir l\'éditeur'|trans }}</a></td>
+					</tr>
+				{% endfor %}
+			</table>
+		{% endif %}
+		{% if shares %}
+			<h2>{{ 'Mes liens partagés'|trans }}</h2>
+			<table class="files">
+				{% for share in shares %}
+					{% set url = url('sandbox_shared', {code: share.code}) %}
+					<tr>
+						<td><a href="{{ url }}">{{ share.title ?: share.project.title }}</a> <span class="faint">{{ share.project.title }} · {{ '%count% vue(s)'|trans({'%count%': share.views}) }}</span></td>
+						<td><code id="share-{{ share.code }}">{{ url }}</code> <button class="btn small" type="button" data-copy="#share-{{ share.code }}">{{ 'Copier'|trans }}</button></td>
+						<td class="size">{{ share.expiresAt ? 'jusqu\'au %date%'|trans({'%date%': share.expiresAt|date('d/m/Y H:i')}) : 'sans limite'|trans }}
+							<form method="post" action="{{ path('sandbox_shared_remove', {code: share.code}) }}" style="display: inline"><input type="hidden" name="_token" value="{{ csrf_token('share-' ~ share.code) }}"><button class="btn small" type="submit">{{ 'Supprimer'|trans }}</button></form></td>
+					</tr>
+				{% endfor %}
+			</table>
+		{% endif %}
 	</div>
 </section>
 {% endblock %}

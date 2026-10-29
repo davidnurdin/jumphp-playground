@@ -40,7 +40,11 @@ and failing that it **photographs the game** itself in a browser.
 - **Install**: every game installs like an app (on phones and computers), with its icon (`assets/icon.png`);
 - **Share**: the phone's share sheet, or social networks on computers;
 - players' **ratings** (1 to 5 stars, no account) and the play counter;
-- the **sources** and the online **editor**.
+- the **sources** and the online **editor**;
+- players' **comments**, **idea box** and reported **issues**, with or without an account. Anonymous messages
+  only show once you approve them. The **bell 🔔** at the top of the site counts the new messages on your games
+  and those waiting for your approval; its page ([Notifications](/studio/notifications)) lists them all, with
+  **✓ Approve**, **Mark resolved** (for an issue) and **Delete** buttons.
 
 ## Publishing
 

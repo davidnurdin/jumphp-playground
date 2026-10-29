@@ -1,8 +1,14 @@
 # Tester son jeu (PHPUnit)
 
 Un jeu JumPHP peut avoir des **tests PHPUnit** : le calcul du score, les collisions, l'IA, le chargement d'un
-niveau… Le playground les fait tourner **sur la version publiée**, dans un bac à sable, et vous montre le
-résultat dans le Studio, test par test.
+niveau… et surtout des **tests qui jouent le jeu** (« la raquette va de haut en bas ») que l'on **regarde jouer**.
+Le playground les fait tourner **sur la version publiée**, dans un bac à sable, et vous montre le résultat dans
+le Studio, test par test, **avec le film de chaque test de jeu**.
+
+Quand Claude développe votre jeu, il écrit ces tests **au fur et à mesure** : chaque mécanique (un déplacement, un
+saut, un tir, un bonus, un ennemi, la fin d'un niveau) a son test qui la joue, lancé après chaque changement.
+Vous les voyez jouer en direct dans [le panneau JumPHP](/docs/panneau-claude), puis vous les revoyez filmés dans
+le Studio après chaque publication.
 
 ## Écrire un test
 
@@ -58,20 +64,32 @@ final class PaddleTest extends GameTestCase
 }
 ```
 
-Aussi : `press($action)`, `run($images)`, `wait($secondes)`, `scene()`, `shot($nom)` (une capture). Ces tests ont
-besoin de SDL : ils tournent sur votre ordinateur avec `bin/jumphp test`, et **on les regarde jouer** dans
-[le panneau JumPHP de Claude Code](/docs/panneau-claude) (chaque test en direct, puis sa dernière image). Le bac
-à sable du playground les laisse de côté et le dit.
+Aussi : `press($action)`, `run($images)`, `wait($secondes)`, `scene()`, `shot($nom)` (une capture). Nommez les
+tests comme des phrases (`testTheBallBouncesOnThePaddle`) : ils s'affichent ainsi (« The ball bounces on the
+paddle »).
+
+**On les regarde jouer**, partout :
+
+- **sur votre ordinateur** : `bin/jumphp test <jeu>` les lance, et [le panneau JumPHP de Claude
+  Code](/docs/panneau-claude) montre chaque test en direct (à la vitesse du jeu), puis sa dernière image ;
+- **sur le site** : le bac à sable du playground les joue sans fenêtre et **filme chaque test** (une image toutes
+  les 4 du jeu). La page des tests du Studio les montre pendant qu'ils tournent, puis les rejoue en boucle :
+  ▶ / ⏸, un curseur pour aller image par image, un clic pour ouvrir l'image en grand.
+
+Ces tests ont besoin de `JumPHP\Testing` (JumPHP 0.2.1 ou plus) : un jeu en 0.2.0 est testé sur le site avec le
+moteur le plus récent, et la sortie le dit. Sur votre ordinateur, `bin/jumphp update` met JumPHP à jour.
 
 ## Les lancer
 
-- **Studio** → votre projet → **Tests (PHPUnit)** → « ▶ Lancer les tests » : la page se met à jour toute seule,
-  puis montre chaque test (✔ / ✘ et le message d'échec) et la sortie complète de PHPUnit.
+- **Studio** → votre projet → **Tests (PHPUnit)** → « ▶ Lancer les tests » : la page se met à jour toute seule
+  (les films des tests de jeu apparaissent pendant qu'ils tournent), puis montre chaque test (✔ / ✘ et le
+  message d'échec), le film de chaque test de jeu et la sortie complète de PHPUnit.
 - **Votre Claude** : `run_tests` puis `get_test_run` (serveur MCP), par exemple après chaque `sync_project`.
 
 ## Le bac à sable
 
 Les tests tournent sur le serveur du playground, isolés : PHP 8.3 (comme le moteur dans le navigateur),
 PHPUnit 11, **sans réseau**, sous un utilisateur sans droits, **120 secondes** et 256 Mo au plus, sans fenêtre
-ni son (pas de SDL : testez la logique du jeu, pas l'affichage). Les fichiers privés du jeu n'y sont pas. Seul
-le propriétaire du jeu voit les résultats.
+ni son (SDL tourne « à blanc » : les tests de jeu dessinent quand même chaque image, pour le film). Les fichiers
+privés du jeu n'y sont pas. Seul le propriétaire du jeu voit les résultats et les films (ceux des 5 dernières
+exécutions sont gardés).

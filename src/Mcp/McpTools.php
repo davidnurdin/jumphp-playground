@@ -67,6 +67,11 @@ To make a game for the user:
 2. git clone the repository (clone_url), then work in it as JumPHP's AGENTS.md says: bin/jumphp install <id>,
    write the game in games/<id>/, bin/jumphp test, look at the screenshots (bin/jumphp shot), browser build.
    Read games/<id>/BRIEF.md: the user's request and the playground's rules.
+   Develop with GAME TESTS, as you go: for each mechanic you write (a move, a jump, a shot, a pickup, an enemy,
+   the end of a level), a test in games/<id>/tests/ that extends JumPHP\Testing\GameTestCase and PLAYS it
+   (start the scene, hold or press the actions, run frames, assert what happened; AGENTS.md "Game tests"), and
+   run bin/jumphp test after each change. The user watches them play live (the jumphp-live pane of Claude Code)
+   and, once pushed, replays each test filmed in the studio (run_tests): name them as sentences.
 3. Make the game's home page in games/<id>/site/ (AGENTS.md section 13: the game's own graphics, SEO, a link
    to play/; check it with bin/jumphp siteshot <id>) and games/<id>/assets/thumbnail.png.
 4. git push, then sync_project: it publishes at once and returns errors and warnings (a commit with a PHP
@@ -81,9 +86,10 @@ Private memory of a project (only its owner sees it, never published): notes and
 session on a project, get_notes and list_todos to know where it stands; while working, add_todos for what is left
 and update_todos when something is done; at the end, save_note (name "progress") with where the game stands, what
 was decided and what comes next, so the next session (or another computer) picks it up.
-PHPUnit: the game's tests/ folder (PHPUnit 11, namespace Tests\\, the game's code as App\\, no SDL window) runs on
-the published version in the playground's sandbox: run_tests after sync_project, then get_test_run until done;
-the owner sees the results in the studio.
+PHPUnit: the game's tests/ folder (PHPUnit 11, namespace Tests\\, the game's code as App\\), game tests included
+(GameTestCase: played without a window, each one filmed), runs on the published version in the playground's
+sandbox: run_tests after each sync_project, then get_test_run until done; the owner sees the results in the
+studio and replays the film of each game test.
 The players' comments, ideas (the idea box) and issues on the game: list_feedback; the owner approves the
 anonymous ones (moderate_feedback), and marks an issue resolved once its fix is published.
 TXT;
@@ -152,7 +158,7 @@ TXT;
                 'remove' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'ids of tasks to delete'],
                 'text' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'description' => 'new texts: {"<id>": "text"}'],
             ], ['slug']),
-            $this->tool('run_tests', 'Run the PHPUnit tests (tests/…Test.php) of the published version of one of your games, in the playground\'s sandbox (PHP 8.3, PHPUnit 11, no network, ' . '120 s at most). Returns the run: call get_test_run until its status is passed, failed or error.', ['slug' => $slug], ['slug']),
+            $this->tool('run_tests', 'Run the PHPUnit tests (tests/…Test.php, game tests included: they play the game without a window and are filmed for the studio) of the published version of one of your games, in the playground\'s sandbox (PHP 8.3, PHPUnit 11, no network, ' . '120 s at most). Returns the run: call get_test_run until its status is passed, failed or error.', ['slug' => $slug], ['slug']),
             $this->tool('get_test_run', 'A test run of one of your games (the last one without id): status (queued, running, passed, failed, error), counts, each test with its failure message, PHPUnit\'s output.', [
                 'slug' => $slug,
                 'id' => ['type' => 'integer'],

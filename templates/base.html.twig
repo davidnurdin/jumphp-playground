@@ -52,6 +52,8 @@
 		</form>
 		<div class="me">
 			{% if app.user %}
+				{% set bell = notifications_count() %}
+				<a class="bell{{ bell ? ' on' }}" href="{{ path('studio_notifications') }}" title="{{ bell ? '%count% notification(s)'|trans({'%count%': bell}) : 'Notifications'|trans }}" aria-label="{{ 'Notifications'|trans }}">🔔{% if bell %}<span class="bell-count">{{ bell > 99 ? '99+' : bell }}</span>{% endif %}</a>
 				<a href="{{ path('studio') }}" title="{{ 'Mes projets'|trans }}">{% if app.user.avatarUrl %}<img src="{{ app.user.avatarUrl }}&s=60" alt="" width="30" height="30">{% endif %}</a>
 				<form action="{{ path('logout') }}" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}"><button class="btn small" type="submit">{{ 'Sortir'|trans }}</button></form>
 			{% else %}

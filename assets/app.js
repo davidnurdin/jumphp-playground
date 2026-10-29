@@ -8,12 +8,14 @@ const T = document.documentElement.lang === 'en' ? {
 	sending: (n, total, name) => `Uploading ${n} / ${total}: ${name}…`,
 	error: (status, name) => `Error ${status} on ${name}`,
 	sent: (n) => `${n} file(s) uploaded.`,
+	play: 'Play', pause: 'Pause', running: 'running…', open: 'Open the frame',
 } : {
 	copied: 'Copié !', linkCopied: 'Lien copié !', copyLink: 'Copier le lien',
 	thanks: (score) => `Merci ! Votre note : ${score} / 5`,
 	sending: (n, total, name) => `Envoi ${n} / ${total} : ${name}…`,
 	error: (status, name) => `Erreur ${status} sur ${name}`,
 	sent: (n) => `${n} fichier(s) envoyé(s).`,
+	play: 'Lire', pause: 'Pause', running: 'en cours…', open: 'Ouvrir l\'image',
 };
 
 document.addEventListener('click', (event) => {
@@ -167,4 +169,86 @@ if (privateForm) {
 		privateForm.dataset.sent = '1';
 		privateForm.submit();
 	});
+}
+
+// a test run's filmed game tests (studio/tests.html.twig): each test replayed in a loop, live while the run runs
+const filmsBlock = document.querySelector('[data-films]');
+if (filmsBlock) {
+	const list = filmsBlock.querySelector('[data-films-list]');
+	const frameUrl = (n, i) => filmsBlock.dataset.frame.replace('/000/0000.png', `/${n}/${String(i).padStart(4, '0')}.png`);
+	const marks = { passed: '✔', failed: '✘', error: '✘', skipped: '○', run: '⏳' };
+	const cards = new Map();
+
+	const show = (card) => {
+		card.img.src = frameUrl(card.film.n, card.at);
+		card.range.value = card.at;
+		card.count.textContent = `${card.at} / ${card.film.frames}`;
+		card.link.href = card.img.src;
+	};
+	const draw = (films) => {
+		for (const film of films) {
+			let card = cards.get(film.n);
+			if (!card) {
+				const el = document.createElement('figure');
+				el.className = 'film';
+				el.innerHTML = '<a class="film-pic" target="_blank" rel="noopener"><img alt=""></a>'
+					+ '<figcaption><span class="mark"></span> <b></b><small class="faint"></small></figcaption>'
+					+ '<div class="film-ctrl"><button class="btn small" type="button"></button><input type="range" min="1"><span class="faint"></span></div>'
+					+ '<pre class="code" hidden></pre>';
+				card = { el, film, at: 1, isPlaying: true, img: el.querySelector('img'), link: el.querySelector('a'),
+					range: el.querySelector('input'), count: el.querySelector('.film-ctrl span'), button: el.querySelector('button') };
+				card.link.title = T.open;
+				card.button.addEventListener('click', () => {
+					card.isPlaying = !card.isPlaying;
+					card.button.textContent = card.isPlaying ? '⏸' : '▶';
+					card.button.title = card.isPlaying ? T.pause : T.play;
+				});
+				card.range.addEventListener('input', () => {
+					card.isPlaying = false;
+					card.button.textContent = '▶';
+					card.at = Number(card.range.value);
+					show(card);
+				});
+				card.button.textContent = '⏸';
+				cards.set(film.n, card);
+				list.append(el);
+			}
+			card.film = film;
+			card.el.className = `film ${film.status}`;
+			card.el.querySelector('.mark').textContent = marks[film.status] || '';
+			card.el.querySelector('b').textContent = film.label;
+			card.el.querySelector('small').textContent = ' ' + film.name + (film.status === 'run' ? ' · ' + T.running : '');
+			const pre = card.el.querySelector('pre');
+			pre.hidden = !film.message;
+			pre.textContent = film.message || '';
+			card.range.max = film.frames;
+			// a test filmed right now: its newest frame
+			if (film.status === 'run') card.at = film.frames;
+			show(card);
+		}
+		filmsBlock.hidden = cards.size === 0 && filmsBlock.dataset.done === '1';
+	};
+	draw(JSON.parse(filmsBlock.dataset.initial || '[]'));
+
+	// 12 frames a second (the films have one frame every 4 of the game's 60)
+	setInterval(() => {
+		for (const card of cards.values()) {
+			if (!card.isPlaying || card.film.status === 'run' || card.film.frames < 2) continue;
+			card.at = card.at >= card.film.frames ? 1 : card.at + 1;
+			show(card);
+		}
+	}, 1000 / 12);
+
+	if (filmsBlock.dataset.done !== '1') {
+		const poll = async () => {
+			const state = await fetch(filmsBlock.dataset.films, { credentials: 'same-origin' }).then((r) => r.json()).catch(() => null);
+			if (state?.done) {
+				location.reload();
+				return;
+			}
+			if (state) draw(state.films);
+			setTimeout(poll, 1000);
+		};
+		setTimeout(poll, 1000);
+	}
 }

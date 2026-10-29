@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {% block title %}{{ 'Tests de %title% – studio JumPHP'|trans({'%title%': project.title}) }}{% endblock %}
-{% block head %}<meta name="robots" content="noindex">{% if not run.done %}<meta http-equiv="refresh" content="2">{% endif %}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 {% set s = run.summary %}
 <section class="section">
@@ -18,8 +18,16 @@
 			{% if s.tests is defined %} · {{ '%tests% tests, %assertions% assertions, %time% s'|trans({'%tests%': s.tests, '%assertions%': s.assertions, '%time%': s.time}) }}{% endif %}
 		</p>
 		{% if not run.done %}
-			<div class="flash success">{{ run.status == 'queued' ? 'En file d\'attente…'|trans : 'Les tests tournent…'|trans }} {{ 'Cette page se recharge toute seule.'|trans }}</div>
+			<div class="flash success">{{ run.status == 'queued' ? 'En file d\'attente…'|trans : 'Les tests tournent…'|trans }} {{ 'Cette page se met à jour toute seule.'|trans }}</div>
 		{% endif %}
+		{# the game tests (GameTestCase), filmed in the sandbox: replayed here, live while they run (assets/app.js) #}
+		<div class="films-block" data-films="{{ path('studio_tests_state', {slug: project.slug, id: run.id}) }}"
+			data-frame="{{ path('studio_tests_frame', {slug: project.slug, id: run.id, n: '000', frame: '0000'}) }}"
+			data-done="{{ run.done ? '1' : '0' }}" data-initial="{{ films|json_encode }}" {{ films is empty and run.done ? 'hidden' }}>
+			<h2>🎬 {{ 'Les tests de jeu, filmés'|trans }}</h2>
+			<p class="muted">{{ 'Chaque test qui joue le jeu (GameTestCase) est filmé pendant qu\'il tourne : ▶ pour le revoir, le curseur pour aller image par image.'|trans }}</p>
+			<div class="films" data-films-list></div>
+		</div>
 		{% if s.tests is defined %}
 			<dl class="stats">
 				<div><dt>{{ 'Réussis'|trans }}</dt><dd style="color: var(--green)">{{ s.tests - s.failures - s.errors - s.skipped }}</dd></div>

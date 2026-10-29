@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ share.title ?: 'Démo de %title%'|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<div>
+				<h1>{{ share.title ?: 'Démo de %title%'|trans({'%title%': project.title}) }}</h1>
+				<p class="muted">{{ 'Une version modifiée de <a href="%url%">%title%</a>, faite dans le bac à sable du playground et partagée par un lien.'|trans({'%url%': path('game', {slug: project.slug})|e, '%title%': project.title|e})|raw }}
+					{{ share.expiresAt ? 'Lien valable jusqu\'au %date%.'|trans({'%date%': share.expiresAt|date('d/m/Y H:i')}) : 'Lien sans date de fin.'|trans }}</p>
+			</div>
+			<div class="actions">
+				<form method="post" action="{{ path('sandbox_shared_take', {code: share.code, to: 'bac-a-sable'}) }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('share-' ~ share.code) }}">
+					<button class="btn" type="submit" title="{{ 'Vos changements de ce jeu dans le bac à sable sont remplacés par ceux-là.'|trans }}">✏️ {{ 'Continuer dans mon bac à sable'|trans }}</button>
+				</form>
+				<form method="post" action="{{ path('sandbox_shared_take', {code: share.code, to: 'espace'}) }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('share-' ~ share.code) }}">
+					<button class="btn primary" type="submit">📥 {{ app.user ? 'Importer dans mon espace'|trans : 'Me connecter et l\'importer'|trans }}</button>
+				</form>
+			</div>
+		</div>
+		<div class="shared-play">
+			<iframe src="{{ play }}" title="{{ project.title }}" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+		</div>
+		<details class="panel" style="margin-top: 18px">
+			<summary>{{ '%count% fichier(s) changé(s) par rapport au jeu publié'|trans({'%count%': files|length}) }}</summary>
+			<ul class="shared-files">
+				{% for file in files %}<li><code>{{ file.path }}</code>{% if file.deleted %} <span class="faint">({{ 'supprimé'|trans }})</span>{% endif %}</li>{% endfor %}
+			</ul>
+			<p class="muted">{{ '« Continuer dans mon bac à sable » ouvre ces fichiers dans l\'éditeur, sans compte. « Importer dans mon espace » les met dans votre éditeur du jeu, une fois connecté avec GitHub : de là vous les envoyez sur GitHub ou forkez le jeu pour le garder.'|trans }}</p>
+		</details>
+	</div>
+</section>
+{% endblock %}

@@ -57,20 +57,33 @@ final class PaddleTest extends GameTestCase
 }
 ```
 
-Also: `press($action)`, `run($frames)`, `wait($seconds)`, `scene()`, `shot($name)` (a screenshot). These tests need
-SDL: they run on your computer with `bin/jumphp test`, and **you watch them play** in
-[the JumPHP pane for Claude Code](/docs/panneau-claude) (each test live, then its last frame). The playground's
-sandbox leaves them out and says so.
+Also: `press($action)`, `run($frames)`, `wait($seconds)`, `scene()`, `shot($name)` (a screenshot). Name the tests
+as sentences (`testTheBallBouncesOnThePaddle`): they are shown that way (“The ball bounces on the paddle”).
+
+**You watch them play**, everywhere:
+
+- **on your computer**: `bin/jumphp test <game>` runs them, and [the JumPHP pane for Claude
+  Code](/docs/panneau-claude) shows each test live (at the game's speed), then its last frame;
+- **on the site**: the playground's sandbox plays them without a window and **films each test** (one frame every
+  4 of the game's). The Studio's tests page shows them while they run, then replays them in a loop: ▶ / ⏸, a
+  slider to go frame by frame, a click to open the frame full size.
+
+These tests need `JumPHP\Testing` (JumPHP 0.2.1 or newer): a game on 0.2.0 is tested on the site with the newest
+engine, and the output says so. On your computer, `bin/jumphp update` brings JumPHP up to date.
+
+When Claude develops your game, it writes these tests **as it goes**: each mechanic (a move, a jump, a shot, a
+pickup, an enemy, the end of a level) gets a test that plays it, run after each change.
 
 ## Running them
 
-- **Studio** → your project → **Tests (PHPUnit)** → “▶ Run the tests”: the page updates by itself, then shows
-  each test (✔ / ✘ and the failure message) and PHPUnit's full output.
+- **Studio** → your project → **Tests (PHPUnit)** → “▶ Run the tests”: the page updates by itself (the game
+  tests' films appear while they run), then shows each test (✔ / ✘ and the failure message), the film of each
+  game test and PHPUnit's full output.
 - **Your Claude**: `run_tests` then `get_test_run` (MCP server), for instance after each `sync_project`.
 
 ## The sandbox
 
 The tests run on the playground's server, isolated: PHP 8.3 (as the engine in the browser), PHPUnit 11,
-**no network**, as a user without rights, **120 seconds** and 256 MB at most, no window or sound (no SDL: test
-the game's logic, not the display). The game's private files are not there. Only the game's owner sees the
-results.
+**no network**, as a user without rights, **120 seconds** and 256 MB at most, no window or sound (SDL runs
+“blank”: the game tests still draw every frame, for the film). The game's private files are not there. Only the
+game's owner sees the results and the films (those of the last 5 runs are kept).

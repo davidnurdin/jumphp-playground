@@ -179,8 +179,9 @@ final class CommentController extends AbstractController
         $url = match ((string)$request->request->get('from')) {
             'list' => $this->generateUrl('game_comments', ['slug' => $project->getSlug(), 'section' => $section]),
             'studio' => $this->generateUrl('studio_project', ['slug' => $project->getSlug()]),
+            'notifications' => $this->generateUrl('studio_notifications', $request->request->get('filter') === 'pending' ? ['filtre' => 'attente'] : []),
             default => $this->generateUrl('game', ['slug' => $project->getSlug()] + ($section !== 'commentaires' ? ['retours' => $section] : [])),
         };
-        return $this->redirect($url . '#retours');
+        return $this->redirect($url . ($request->request->get('from') === 'notifications' ? '' : '#retours'));
     }
 }

@@ -21,12 +21,14 @@ const T = document.documentElement.lang === 'en' ? {
 	sending: 'sending…', sent: (sha) => `sent: ${sha} (publishing)`,
 	confirmDelete: (path) => `Delete ${path} (in your changes)?`,
 	confirmReset: 'Erase all your changes and start again from the original game?', reset: 'Everything is back to the original.',
+	making: 'making the link…', copied: 'Copied!', until: (date) => `Works until ${date}.`, forever: 'Works with no end date.',
 } : {
 	binary: (kb) => `Fichier binaire (${kb} Ko) : il ne s'édite pas ici.`,
 	draft: 'modifié (brouillon)', same: 'identique à la version publiée', saved: 'enregistré', error: 'erreur : ',
 	sending: 'envoi…', sent: (sha) => `envoyé : ${sha} (publication en cours)`,
 	confirmDelete: (path) => `Supprimer ${path} (dans vos modifications) ?`,
 	confirmReset: 'Effacer toutes vos modifications et repartir du jeu d\'origine ?', reset: 'Tout est revenu à l\'origine.',
+	making: 'création du lien…', copied: 'Copié !', until: (date) => `Valable jusqu'au ${date}.`, forever: 'Valable sans date de fin.',
 };
 if (root) {
 	const $ = (id) => document.getElementById(id);
@@ -232,6 +234,40 @@ if (root) {
 				if (current) open(current.path);
 			} catch (e) { say(e.message); }
 		}, { once: true });
+	});
+	// a link to this version (SandboxShare): what is saved now, kept for the chosen time
+	$('btn-share').addEventListener('click', async () => {
+		await flush();
+		$('dlg-share').querySelector('[data-share-form]').hidden = false;
+		$('dlg-share').querySelector('[data-share-result]').hidden = true;
+		$('btn-share-make').hidden = false;
+		$('share-status').textContent = '';
+		$('dlg-share').showModal();
+	});
+	$('btn-share-make').addEventListener('click', async () => {
+		$('share-status').textContent = T.making;
+		try {
+			const result = await api('POST', '/share', { duration: $('share-duration').value, title: $('share-title').value });
+			$('share-url').value = result.url;
+			$('share-expires').textContent = result.expires ? T.until(new Date(result.expires).toLocaleString()) : T.forever;
+			$('dlg-share').querySelector('[data-share-form]').hidden = true;
+			$('dlg-share').querySelector('[data-share-result]').hidden = false;
+			$('btn-share-make').hidden = true;
+			$('share-status').textContent = '';
+			$('share-url').select();
+		} catch (e) { $('share-status').textContent = e.message; }
+	});
+	$('btn-share-copy').addEventListener('click', () => {
+		navigator.clipboard?.writeText($('share-url').value).then(() => { $('btn-share-copy').textContent = T.copied; });
+	});
+	// the sandbox into one's space: what is being typed is saved first
+	document.querySelector('form[data-flush]')?.addEventListener('submit', async (event) => {
+		const form = event.currentTarget;
+		if (form.dataset.flushed) return;
+		event.preventDefault();
+		await flush();
+		form.dataset.flushed = '1';
+		form.submit();
 	});
 	$('btn-fork')?.addEventListener('click', async () => { await flush(); $('dlg-fork').showModal(); });
 	$('btn-reset')?.addEventListener('click', async () => {
