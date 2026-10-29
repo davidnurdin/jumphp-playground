@@ -36,7 +36,12 @@ What it shows:
   **🐢 Game speed / ⏩ Fast** button (`r`) picks the speed: the game's (the default, to see the paddle move) or as
   fast as it goes.
 - **The screens**: the screenshot `bin/jumphp shot` or `siteshot` just made, and every picture Claude opens to look
-  at the game, drawn in the pane (kitty, Ghostty, iTerm2 terminals; elsewhere, the file's path).
+  at the game, drawn in the pane.
+- **Pictures in any terminal**: by default they are drawn as small coloured blocks (`▦ Blocks`), which any
+  truecolor terminal shows (GNOME Terminal, Konsole, Windows Terminal, VS Code…): for this the engine writes, beside
+  each PNG, a small raw copy (`.rgb`). In kitty, Ghostty or iTerm2 the pane draws the PNG itself (`🖼 HD`); the `p`
+  key switches. The **🖼 Open** button (`o`) opens the picture shown in your desktop's image viewer (`xdg-open`,
+  `open` on macOS), full size.
 - **The playground**: the result of the [site's PHPUnit tests](/docs/tests) (`run_tests`, `get_test_run`) and of
   publications (`sync_project`) when Claude uses the MCP server.
 

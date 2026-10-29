@@ -36,8 +36,12 @@ Ce qu'il montre :
   pour voir sa dernière image. Le bouton **🐢 Game speed / ⏩ Fast** (`r`) choisit la vitesse : celle du jeu (par
   défaut, pour voir la raquette bouger) ou le plus vite possible.
 - **Les écrans** : la capture que `bin/jumphp shot` ou `siteshot` vient de faire, et chaque image que Claude ouvre
-  pour regarder le jeu, affichées dans le panneau (terminaux kitty, Ghostty, iTerm2 ; ailleurs, le chemin du
-  fichier).
+  pour regarder le jeu, affichées dans le panneau.
+- **Les images dans n'importe quel terminal** : par défaut elles sont dessinées en petits blocs de couleur
+  (`▦ Blocks`), que tout terminal en couleurs vraies affiche (GNOME Terminal, Konsole, Windows Terminal, VS Code…) :
+  le moteur écrit pour cela, à côté de chaque PNG, une petite copie brute (`.rgb`). Dans kitty, Ghostty ou iTerm2
+  le panneau affiche le PNG lui-même (`🖼 HD`) ; la touche `p` bascule. Le bouton **🖼 Open** (`o`) ouvre l'image
+  affichée dans la visionneuse de votre bureau (`xdg-open`, `open` sur macOS), en taille réelle.
 - **Le playground** : le résultat des [tests PHPUnit du site](/docs/tests) (`run_tests`, `get_test_run`) et des
   publications (`sync_project`) quand Claude utilise le serveur MCP.
 
