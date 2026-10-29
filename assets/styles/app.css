@@ -47,7 +47,7 @@ p { margin: 0 0 1em; }
 .nav { display: flex; gap: 4px; }
 .nav a { color: var(--muted); padding: 6px 10px; border-radius: var(--radius); font-weight: 600; white-space: nowrap; }
 .nav a:hover, .nav a.on { color: var(--ink); background: var(--panel); text-decoration: none; }
-.search { flex: 1; min-width: 160px; max-width: 360px; margin-left: auto; }
+.search { flex: 1; min-width: 110px; max-width: 360px; margin-left: auto; }
 .me { display: flex; align-items: center; gap: 8px; }
 .me img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
 .me form { margin: 0; }
@@ -215,6 +215,7 @@ dialog::backdrop { background: rgba(5, 6, 15, .7); }
 /* --- the wall of games (/games) ------------------------------------------------------------------- */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .wall-top { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 18px 16px; max-width: 1600px; margin: 0 auto; }
+.wall-top h1 { margin: 0; font-size: 22px; }
 .sorts { display: flex; flex-wrap: wrap; gap: 6px; }
 .sorts a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 14px; }
 .sorts a:hover { color: var(--ink); text-decoration: none; border-color: var(--yellow); }
@@ -403,3 +404,38 @@ details.note pre { max-height: 400px; overflow: auto; font-size: 13px; }
 .version-bar { padding: 8px 16px; background: color-mix(in srgb, var(--red) 18%, var(--panel)); border-bottom: 1px solid var(--line); font-size: 14px; }
 .version-bar > span { flex: 1; min-width: 240px; }
 .version-bar + .frame { height: calc(100vh - 160px); }
+
+/* --- a game's statistics (studio/stats) ------------------------------------------------------------- */
+.stat-tiles { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); margin: 18px 0; }
+.stat-tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.stat-tile b { font: 700 30px/1.2 var(--mono); color: var(--ink); }
+.stat-chart { margin-top: 18px; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 140px; border-bottom: 1px solid var(--line); padding-top: 18px; }
+.bars-top { position: absolute; top: 0; left: 0; font-size: 12px; }
+.bar { flex: 1; min-width: 0; height: var(--h); background: var(--cyan); border-radius: 4px 4px 0 0; position: relative; outline: none; }
+.bar.zero { height: 2px; background: var(--line); }
+.bar::before { content: ""; position: absolute; inset: -140px -1px 0; } /* hit area: the whole column */
+.bar:hover, .bar:focus-visible { filter: brightness(1.25); }
+.bar:hover::after, .bar:focus-visible::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--bg-2); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px; font: 12px var(--mono); z-index: 2; pointer-events: none; }
+.bars-axis { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; }
+.spread { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; gap: 8px; font-size: 14px; }
+.spread-bar { height: 10px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.spread-bar span { display: block; height: 100%; background: var(--yellow); border-radius: 4px; }
+details.panel summary { cursor: pointer; }
+
+/* --- the editor's console (what the game's PHP writes) ---------------------------------------------- */
+.ed-console { border-top: 1px solid var(--line); background: var(--bg-2); display: flex; flex-direction: column; min-height: 0; }
+.ed-console[open] { height: 42%; }
+.ed-console summary { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font: 600 13px var(--mono); color: var(--muted); list-style: none; }
+.ed-console summary::-webkit-details-marker { display: none; }
+.ed-console summary::before { content: "▸"; transition: transform .15s; }
+.ed-console[open] summary::before { transform: rotate(90deg); }
+.ed-console summary .btn { margin-left: auto; }
+.ed-console:not([open]) summary .btn { display: none; }
+.ed-console-count { background: var(--panel-2); color: var(--ink); border-radius: 99px; padding: 0 7px; font-size: 12px; }
+.ed-console-count.err { background: #45121f; color: var(--red); }
+.ed-console-log { flex: 1; overflow: auto; padding: 4px 12px 10px; min-height: 0; }
+.ed-console-log pre { margin: 0; padding: 0; background: none; border: 0; font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; color: var(--ink); }
+.ed-console-log pre.err { color: var(--red); }
+.ed-console-log .sep { font: 11px var(--mono); color: var(--faint); border-top: 1px dashed var(--line); margin: 6px 0 2px; padding-top: 2px; }
+.ed-console-log iframe { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; margin: 4px 0; }

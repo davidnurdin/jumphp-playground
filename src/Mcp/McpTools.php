@@ -23,6 +23,7 @@ use App\Service\Slugs;
 use App\Service\TestRunner;
 use App\Service\UploadToken;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -48,6 +49,7 @@ final class McpTools
         private CommentRepository $comments,
         private TestRunner $tests,
         private TestRunRepository $testRuns,
+        private TranslatorInterface $translator,
         private string $appUrl,
     ) {
     }
@@ -67,6 +69,8 @@ To make a game for the user:
 2. git clone the repository (clone_url), then work in it as JumPHP's AGENTS.md says: bin/jumphp install <id>,
    write the game in games/<id>/, bin/jumphp test, look at the screenshots (bin/jumphp shot), browser build.
    Read games/<id>/BRIEF.md: the user's request and the playground's rules.
+   Ask the user once whether to install the `jumphp` command for their whole system (bin/jumphp cli:install:
+   jumphp <command> from any folder, and a question when a new JumPHP is out on Packagist); only on a yes.
    Develop with GAME TESTS, as you go: for each mechanic you write (a move, a jump, a shot, a pickup, an enemy,
    the end of a level), a test in games/<id>/tests/ that extends JumPHP\Testing\GameTestCase and PLAYS it
    (start the scene, hold or press the actions, run frames, assert what happened; AGENTS.md "Game tests"), and
@@ -77,6 +81,9 @@ To make a game for the user:
 4. git push, then sync_project: it publishes at once and returns errors and warnings (a commit with a PHP
    syntax error is not published). Fix and push again until it is "published".
 5. When the game is good: update_project with listed=true (it appears in the directory). Give the user the URL.
+6. If the user wants the game on Google Play: bin/jumphp twa <id> --url <its page here> builds the Android app
+   (AGENTS.md "Android app"; the user accepts the Android SDK license once, in their terminal), then
+   update_project with android_package and android_fingerprints (the fingerprint it prints, then Google Play's).
 Files the game needs that may not be public (the data or sounds of an original game): keep them out of git and
 send them as private files (upload_private_files gives a URL to send them to with curl); the game loads them
 like its own files, no repository, source page or fork holds them.
@@ -111,13 +118,15 @@ TXT;
                 'slug' => ['type' => 'string', 'description' => 'optional: URL name and repository name (a-z, 0-9, -); default from the title'],
             ], ['title', 'description', 'category', 'brief']),
             $this->tool('get_project', 'A project: status (creating, empty, ready, error), last publication, errors, repository, clone URL, game folder, URLs.', ['slug' => $slug], ['slug'], true),
-            $this->tool('update_project', 'Change a project\'s title, description, category, brief, or listed (true = shown in the directory).', [
+            $this->tool('update_project', 'Change a project\'s title, description, category, brief, listed (true = shown in the directory), or its Android app on Google Play (android_package + android_fingerprints, from bin/jumphp twa: then the playground\'s /.well-known/assetlinks.json vouches for the app; android_package "" removes it).', [
                 'slug' => $slug,
                 'title' => ['type' => 'string'],
                 'description' => ['type' => 'string'],
                 'category' => ['type' => 'string'],
                 'brief' => ['type' => 'string'],
                 'listed' => ['type' => 'boolean'],
+                'android_package' => ['type' => 'string', 'description' => 'the Android app\'s package, e.g. io.github.me.my_game ("" = no app)'],
+                'android_fingerprints' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'SHA-256 fingerprints (AA:BB:...) of the upload key (bin/jumphp twa prints it) and of Google Play\'s app signing key'],
             ], ['slug']),
             $this->tool('sync_project', 'Publish the last commit of the project\'s branch now (after git push) and return the result: published / unchanged / failed, errors (PHP syntax, game.yaml...) and warnings.', ['slug' => $slug], ['slug']),
             $this->tool('import_project', 'Publish an existing public JumPHP project of GitHub that the creator can push to.', [
@@ -270,6 +279,16 @@ TXT;
                 throw new McpToolError('The game is not published yet: push it and call sync_project first.');
             }
             $project->setListed((bool)$args['listed']);
+        }
+        if (isset($args['android_package'])) {
+            if (!$project->isPublished()) {
+                throw new McpToolError('The game is not published yet: push it and call sync_project first.');
+            }
+            try {
+                $project->setAndroid((string)$args['android_package'], array_map('strval', (array)($args['android_fingerprints'] ?? $project->getAndroidFingerprints())));
+            } catch (\InvalidArgumentException $e) {
+                throw new McpToolError($this->translator->trans($e->getMessage(), [], null, 'en'));
+            }
         }
         $this->em->flush();
         return $this->details($project);
@@ -568,6 +587,7 @@ TXT;
             'clone_url' => $p->getCloneUrl(),
             'branch' => $p->getDefaultBranch(),
             'game_folder' => $p->getGameDir(),
+            'android' => $p->getAndroidPackage() ? ['package' => $p->getAndroidPackage(), 'fingerprints' => $p->getAndroidFingerprints()] : null,
             'game_id' => $p->getGameId(),
             'published_commit' => $p->getPublishedSha(),
             'published_at' => $p->getPublishedAt()?->format(DATE_ATOM),

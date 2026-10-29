@@ -25,6 +25,8 @@ Then the **tutorials** build a game step by step:
 7. [Online multiplayer](/docs/multijoueur)
 8. [The game's home page and publishing](/docs/page-du-jeu)
 
+Once the game is done: [put it on Google Play](/docs/android) (an Android app, made by `bin/jumphp twa`).
+
 And for programs that want to read the directory: [the public API](/docs/api).
 
 ## How a JumPHP game works

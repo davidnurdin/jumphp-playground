@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Statistiques de %title% – studio JumPHP'|trans({'%title%': project.title}) }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{# a game's numbers for its creator (StudioController::stats): its own visits and games are not counted, nor the robots' #}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h1>{{ 'Statistiques'|trans }} · <a href="{{ path('game', {slug: project.slug}) }}">{{ project.title }}</a></h1>
+			<div class="actions">
+				<a class="btn" href="{{ path('studio_project', {slug: project.slug}) }}">{{ 'Réglages'|trans }}</a>
+				<a class="btn" href="{{ path('studio') }}">{{ 'Mes jeux'|trans }}</a>
+			</div>
+		</div>
+		<p class="muted">{{ 'Vos propres visites et parties ne comptent pas, ni celles des robots. Les jours sont comptés depuis la mise en place des statistiques.'|trans }}</p>
+
+		{% set labels = {visits: 'Visites de la page du jeu'|trans, plays: 'Parties lancées'|trans, launches: 'Lancements du jeu installé'|trans} %}
+		<div class="stat-tiles">
+			{% for field, label in labels %}
+				<div class="stat-tile"><span class="muted">{{ label }}</span><b>{{ month[field]|number_format(0, ',', ' ') }}</b><span class="faint">{{ '30 derniers jours · %total% en tout'|trans({'%total%': totals[field]|number_format(0, ',', ' ')}) }}</span></div>
+			{% endfor %}
+			<div class="stat-tile"><span class="muted">{{ 'Parties depuis la publication'|trans }}</span><b>{{ project.plays|number_format(0, ',', ' ') }}</b><span class="faint">{{ 'tous joueurs confondus'|trans }}</span></div>
+		</div>
+
+		{% for field, label in labels %}
+			{% set top = max(1, max(days|column(field))) %}
+			<div class="panel stat-chart">
+				<h2>{{ label }} <span class="faint">· {{ '30 derniers jours'|trans }}</span></h2>
+				<div class="bars" role="img" aria-label="{{ label }} : {{ days|map(d => d.day|date('d/m') ~ ' ' ~ attribute(d, field))|join(', ') }}">
+					<span class="bars-top faint">{{ top }}</span>
+					{% for d in days %}
+						{% set n = attribute(d, field) %}
+						<span class="bar{{ n ? '' : ' zero' }}" style="--h: {{ (n / top * 100)|round(1) }}%" data-tip="{{ d.day|date('d/m') }} : {{ n }}" tabindex="0"></span>
+					{% endfor %}
+				</div>
+				<div class="bars-axis faint"><span>{{ days|first.day|date('d/m') }}</span><span>{{ 'aujourd\'hui'|trans }}</span></div>
+			</div>
+		{% endfor %}
+
+		<div class="grid" style="margin-top: 18px">
+			<div class="panel">
+				<h2>{{ 'Notes'|trans }}</h2>
+				{% set count = ratings|reduce((a, n) => a + n, 0) %}
+				<p class="muted">{{ project.rating ? '%rating%/5, %count% note(s)'|trans({'%rating%': project.rating, '%count%': count}) : 'Pas encore de note.'|trans }}</p>
+				{% for score in 5..1 %}
+					<div class="spread"><span>{{ score }} ★</span><span class="spread-bar"><span style="width: {{ count ? (ratings[score] / count * 100)|round(1) : 0 }}%"></span></span><span class="faint">{{ ratings[score] }}</span></div>
+				{% endfor %}
+			</div>
+			<div class="panel">
+				<h2>{{ 'Avis des joueurs'|trans }}</h2>
+				<table class="files">
+					{% for section, kind in {commentaires: 'Commentaires', idees: 'Idées', problemes: 'Problèmes'} %}
+						<tr><td><a href="{{ path('game_comments', {slug: project.slug, section: section}) }}#retours">{{ kind|trans }}</a></td><td class="size">{{ messages[{commentaires: 'comment', idees: 'idea', problemes: 'issue'}[section]] }}</td></tr>
+					{% endfor %}
+					<tr><td>{{ 'Forks (jeux faits à partir du vôtre)'|trans }}</td><td class="size">{{ forks }}</td></tr>
+				</table>
+			</div>
+		</div>
+
+		<details class="panel" style="margin-top: 18px">
+			<summary>{{ 'Les chiffres jour par jour'|trans }}</summary>
+			<table class="files">
+				<tr><th>{{ 'Jour'|trans }}</th>{% for label in labels %}<th class="size">{{ label }}</th>{% endfor %}</tr>
+				{% for d in days|reverse %}
+					<tr><td>{{ d.day|date('d/m/Y') }}</td>{% for field in labels|keys %}<td class="size">{{ attribute(d, field) }}</td>{% endfor %}</tr>
+				{% endfor %}
+			</table>
+		</details>
+	</div>
+</section>
+{% endblock %}

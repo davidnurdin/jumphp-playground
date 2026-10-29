@@ -1,5 +1,5 @@
 # The JumPHP playground: Symfony on FrankenPHP (PHP 8.4). Stages: base (dev: the code is mounted), prod.
-FROM dunglas/frankenphp:1-php8.4 AS base
+FROM dunglas/frankenphp:1-php8.5 AS base
 RUN install-php-extensions pdo_mysql pdo_sqlite intl zip gd opcache apcu \
  && apt-get update && apt-get install -y --no-install-recommends git unzip curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*

@@ -49,6 +49,17 @@ docker compose exec app sh -c 'APP_ENV=test php bin/console doctrine:migrations:
 docker compose exec app vendor/bin/phpstan analyse
 ```
 
+### Passer à une nouvelle version de PHP
+
+`bin/php-upgrade <version>` (par exemple `bin/php-upgrade 8.6`) migre tout, le playground et JumPHP
+(`JUMPHP_DIR`, par défaut `../JumPHP`) : les images (site FrankenPHP, banc de test, runtime bureau, relais, moteur
+WebAssembly à la dernière version corrective), la doc, et le code que la nouvelle version déprécie (casts
+`(boolean)`…, `setAccessible()`, `imagedestroy()`…). Puis il reconstruit les images et lance tous les contrôles :
+`php -l` de tout le code, PHPUnit et PHPStan du playground, les tests du moteur et `bin/jumphp test` de chaque jeu
+(une dépréciation = un échec), et le moteur WebAssembly. Il ne touche pas à la prod et ne publie rien : la fin dit
+ce qui reste à faire (release JumPHP, déploiement). `--skip-wasm` : sans le moteur WebAssembly (~25 min) ;
+`--check` : seulement les contrôles.
+
 ## Production
 
 Derrière un Traefik déjà en place qui laisse passer le TLS (FrankenPHP prend ses certificats lui-même pour les

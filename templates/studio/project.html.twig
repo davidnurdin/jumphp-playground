@@ -10,6 +10,7 @@
 			<div class="actions">
 				<a class="btn" href="{{ path('game', {slug: project.slug}) }}">{{ 'Page du jeu'|trans }}</a>
 				{% if project.publishedSha %}<a class="btn" href="{{ path('game_edit', {slug: project.slug}) }}">{{ 'Éditeur'|trans }}</a>{% endif %}
+				<a class="btn" href="{{ path('studio_stats', {slug: project.slug}) }}">📊 {{ 'Statistiques'|trans }}</a>
 				<a class="btn" href="{{ project.repoUrl }}">GitHub</a>
 				<form method="post" action="{{ path('studio_sync', {slug: project.slug}) }}"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn" type="submit" {{ project.status == 'creating' ? 'disabled' }}>↻ {{ 'Synchroniser'|trans }}</button></form>
 			</div>
@@ -42,6 +43,16 @@
 					<div class="field"><label class="inline"><input type="checkbox" name="listed" value="1" {{ project.listed ? 'checked' }} {{ not project.publishedSha ? 'disabled' }}> {{ 'Visible dans l\'annuaire'|trans }}</label></div>
 					<button class="btn primary" type="submit">{{ 'Enregistrer'|trans }}</button>
 				</form>
+				{% if project.publishedSha %}
+				<form method="post" action="{{ path('studio_android', {slug: project.slug}) }}" class="panel" id="android">
+					<h2>{{ 'Application Android (Google Play)'|trans }}</h2>
+					<p class="muted">{{ 'Votre jeu en appli Android, plein écran : <code>bin/jumphp twa %id% --url %url%</code> la fabrique et donne l\'empreinte de votre clé. Déclarez-les ici pour que %host% reconnaisse l\'appli (sans barre d\'adresse). <a href="%doc%">Le guide</a>.'|trans({'%id%': project.gameInfo.id ?? project.slug, '%url%': url('game', {slug: project.slug}), '%host%': app.request.host, '%doc%': path('docs_page', {page: 'android'})})|raw }}</p>
+					<input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}">
+					<div class="field"><label for="android-package">{{ 'Nom du paquet'|trans }}</label><input id="android-package" name="package" value="{{ project.androidPackage }}" placeholder="io.github.{{ app.user.login|lower|replace({'-': '_'}) }}.{{ project.slug|replace({'-': '_'}) }}" maxlength="150" spellcheck="false"></div>
+					<div class="field"><label for="android-fingerprints">{{ 'Empreintes SHA-256 des clés (une par ligne)'|trans }}</label><textarea id="android-fingerprints" name="fingerprints" rows="3" spellcheck="false" placeholder="AA:BB:CC:…">{{ project.androidFingerprints|join("\n") }}</textarea><div class="hint">{{ 'Celle de votre clé (bin/jumphp twa), puis celle de Google Play (Play Console › Configuration › Signature de l\'application). Un paquet vide retire l\'appli.'|trans }}</div></div>
+					<button class="btn" type="submit">{{ 'Enregistrer'|trans }}</button>
+				</form>
+				{% endif %}
 			</div>
 			<aside>
 				{% if project.publishedSha %}

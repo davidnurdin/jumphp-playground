@@ -58,16 +58,18 @@ final class PlayController extends AbstractController
     {
         $project = $this->published($slug);
         $sha = $this->version($project, $request);
-        $engine = $this->runtimes->pick($sha ? (string)($this->files->manifest($project, $sha)['engine'] ?? '') : $project->getEngineVersion());
+        $draft = (string)$request->query->get('draft');
+        $isDraft = $sha === null && $draft !== '' && $this->tokens->read($draft, $project->getId()) !== null;
+        // the editor's preview: the newest engine (hot reload, the console), whatever the published game asked for
+        $engine = $this->runtimes->pick($isDraft ? null : ($sha ? (string)($this->files->manifest($project, $sha)['engine'] ?? '') : $project->getEngineVersion()));
         if (!$engine) {
             throw new NotFoundHttpException('No engine');
         }
         $info = $project->getGameInfo();
         $runtime = $this->runtimes->info($engine);
-        $draft = (string)$request->query->get('draft');
         $manifest = 'manifest.json' . match (true) {
             $sha !== null => '?version=' . $sha,
-            $draft !== '' && $this->tokens->read($draft, $project->getId()) !== null => '?draft=' . rawurlencode($draft),
+            $isDraft => '?draft=' . rawurlencode($draft),
             default => '',
         };
         $hasIcon = (bool)$this->files->path($project, 'assets/icon.png');

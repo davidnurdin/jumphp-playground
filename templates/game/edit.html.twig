@@ -58,9 +58,15 @@
 	</section>
 	<section class="ed-preview" aria-label="{{ 'Aperçu'|trans }}">
 		<div class="ed-head"><span class="path">{{ 'Aperçu avec vos modifications'|trans }}</span>
-			<label class="ed-live" title="{{ 'Chaque modification enregistrée relance le jeu tout de suite'|trans }}"><input type="checkbox" id="live" checked> ⚡ {{ 'En direct'|trans }}</label>
+			<label class="ed-live" title="{{ 'Chaque modification enregistrée va dans le jeu, sans le recharger'|trans }}"><input type="checkbox" id="live" checked> ⚡ {{ 'En direct'|trans }}</label>
 			<button class="btn small" type="button" id="btn-reload">↻ {{ 'Relancer'|trans }}</button></div>
 		<iframe id="preview" title="{{ 'Aperçu du jeu'|trans }}" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+		{# what the game's PHP writes (echo, var_dump, print_r, warnings; phpinfo() as a page): assets/editor.js #}
+		<details class="ed-console" id="console">
+			<summary><span>{{ 'Console'|trans }}</span> <span class="ed-console-count" id="console-count" hidden></span>
+				<button class="btn small" type="button" id="console-clear">{{ 'Effacer'|trans }}</button></summary>
+			<div class="ed-console-log" id="console-log" role="log" aria-live="off"><p class="faint">{{ 'Ce que le PHP du jeu écrit (echo, var_dump, print_r, phpinfo(), les avertissements) s\'affiche ici.'|trans }}</p></div>
+		</details>
 	</section>
 </div>
 

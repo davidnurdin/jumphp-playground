@@ -30,6 +30,7 @@ final class Publisher
         'id' => 'game', 'title' => 'Game', 'version' => '1.0.0', 'description' => '', 'width' => 320, 'height' => 180,
         'lang' => 'en', 'online' => false, 'net_url' => null, 'touch' => null, 'controls' => null,
         'descriptions' => [],   // the description in other languages: {en: '…', fr: '…'} (the site shows the visitor's)
+        'short_name' => null,   // the installed game's name under its icon (game.yaml pwa.short_name)
     ];
 
     public function __construct(
@@ -265,6 +266,9 @@ final class Publisher
             }
         }
         $info['descriptions'] = $descriptions;
+        // the name under the installed game's icon (game.yaml pwa: {short_name: ...}, JumPHP docs/api-web.md)
+        $short = is_array($config['pwa'] ?? null) && is_scalar($config['pwa']['short_name'] ?? null) ? trim((string)$config['pwa']['short_name']) : '';
+        $info['short_name'] = $short !== '' ? mb_substr($short, 0, 30) : null;
 
         // what the browser loads, and the PHP syntax of it
         $loaded = [];

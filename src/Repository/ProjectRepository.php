@@ -133,6 +133,13 @@ class ProjectRepository extends ServiceEntityRepository
         $em->refresh($project);
     }
 
+    /** @return Project[] the published games with an Android app (their package and keys, for assetlinks.json) */
+    public function withAndroidApp(): array
+    {
+        return $this->createQueryBuilder('p')->where('p.android IS NOT NULL')->andWhere('p.publishedSha IS NOT NULL')
+            ->orderBy('p.id')->getQuery()->getResult();
+    }
+
     public function addPlay(Project $project): void
     {
         $this->getEntityManager()->createQuery('UPDATE App\Entity\Project p SET p.plays = p.plays + 1 WHERE p.id = :id')

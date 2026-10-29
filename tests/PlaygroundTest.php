@@ -70,6 +70,7 @@ final class PlaygroundTest extends WebTestCase
         self::assertSelectorCount(1, 'a.card[href="/test-game"]');    // once, not again in its category
         $this->get(self::APP, '/test-game');
         self::assertSelectorTextContains('h1', 'Test Game');
+        self::assertStringNotContainsString('&amp;#', (string)$this->client->getResponse()->getContent());
         $this->get(self::APP, '/test-game/source/src/Scene/PlayScene.php');
         self::assertResponseIsSuccessful();
         // installable as an app of its own
@@ -79,6 +80,16 @@ final class PlaygroundTest extends WebTestCase
         $this->get(self::APP, $manifest['icons'][1]['src']);
         self::assertResponseHeaderSame('Content-Type', 'image/png');
         self::assertSame([512, 512], array_slice(getimagesizefromstring((string)$this->client->getInternalResponse()->getContent()) ?: [], 0, 2));
+        // a long title: its name under the icon without its article; a short name in game.yaml wins
+        $this->project->setTitle("L'Armure Sacrée d'Antiriad");
+        self::assertSame("Armure Sacrée d'Antiriad", $this->project->getAppName());
+        $this->project->publish((string)$this->project->getPublishedSha(), (string)$this->project->getEngineVersion(), ['short_name' => 'Antiriad'] + $this->project->getGameInfo(), $this->project->getSite(), $this->project->hasThumbnail());
+        self::assertSame('Antiriad', $this->project->getAppName());
+        // the site itself is an app too
+        $this->get(self::APP, '/manifest.webmanifest');
+        self::assertSame(['JumPHP', '/'], array_values(array_intersect_key((array)json_decode((string)$this->client->getResponse()->getContent(), true), ['scope' => 1, 'short_name' => 1])));
+        $this->get(self::APP, '/sw.js');
+        self::assertResponseHeaderSame('Service-Worker-Allowed', '/');
         $this->get(self::APP, '/test-game/sw.js');
         self::assertResponseHeaderSame('Service-Worker-Allowed', '/test-game');
         $this->get(self::APP, '/nope-nope');
@@ -231,7 +242,7 @@ final class PlaygroundTest extends WebTestCase
             self::assertResponseIsSuccessful($query);
             self::assertSelectorTextContains('.wall .tile', 'Test Game');
         }
-        self::assertSelectorExists('.wall-top a.logo[href="/"]');
+        self::assertSelectorExists('header.top nav a.on[href="/games"]');    // the whole menu, on its Games tab
         $this->get(self::APP, '/jeux');
         self::assertResponseRedirects('/games', 301);
     }
@@ -599,6 +610,66 @@ final class PlaygroundTest extends WebTestCase
         // a page past the end is the last one
         $this->get(self::APP, '/test-game/commentaires?page=99');
         self::assertSelectorTextContains('.pager', 'Page 2 / 2');
+    }
+
+    public function testStatisticsOfAGame(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        $this->client->setServerParameter('HTTP_USER_AGENT', 'Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0');
+        $this->get(self::APP, '/test-game');
+        $this->get(self::APP, '/test-game/jouer');
+        $this->get(self::APP, '/test-game/jouer');
+        $this->get(self::APP, '/test-game/jouer?app=1');
+        // a robot is not counted, nor the creator
+        $this->client->setServerParameter('HTTP_USER_AGENT', 'Googlebot/2.1');
+        $this->get(self::APP, '/test-game/jouer');
+        $this->client->setServerParameter('HTTP_USER_AGENT', 'Mozilla/5.0 Firefox/140.0');
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/test-game/jouer');
+        $this->get(self::APP, '/studio');
+        self::assertSelectorExists('a[href="/studio/projet/test-game/statistiques"]');
+        $this->get(self::APP, '/studio/projet/test-game/statistiques');
+        self::assertResponseIsSuccessful();
+        self::assertSame(['1', '2', '1'], $this->client->getCrawler()->filter('.stat-tile b')->slice(0, 3)->each(fn ($b) => $b->text()));
+        self::assertSelectorCount(3 * 30, '.bars .bar');    // three charts of 30 days
+        // only its creator sees them
+        $someone = new User(1003, 'someone');
+        $this->em->persist($someone);
+        $this->em->flush();
+        $this->client->loginUser($someone);
+        $this->get(self::APP, '/studio/projet/test-game/statistiques');
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testAndroidAppOfAGame(): void
+    {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
+        $this->get(self::APP, '/.well-known/assetlinks.json');
+        self::assertSame([], json_decode((string)$this->client->getResponse()->getContent(), true));
+        // the creator declares the app in the studio: its package, the fingerprint of its key (any case, colons or not)
+        $this->client->loginUser($this->user);
+        $this->get(self::APP, '/studio/projet/test-game');
+        $this->client->submit($this->client->getCrawler()->filter('#android')->form([
+            'package' => 'io.github.tester.test_game',
+            'fingerprints' => strtolower(str_repeat('ab', 32)) . "\n",
+        ]));
+        $this->get(self::APP, '/.well-known/assetlinks.json');
+        $links = json_decode((string)$this->client->getResponse()->getContent(), true);
+        self::assertSame(['delegate_permission/common.handle_all_urls'], $links[0]['relation']);
+        self::assertSame(['namespace' => 'android_app', 'package_name' => 'io.github.tester.test_game', 'sha256_cert_fingerprints' => [implode(':', array_fill(0, 32, 'AB'))]], $links[0]['target']);
+        // a wrong package is refused and said
+        $this->get(self::APP, '/studio/projet/test-game');
+        $this->client->submit($this->client->getCrawler()->filter('#android')->form(['package' => 'Not A Package']));
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.error', 'paquet Android invalide');
+        // or by the creator's Claude (MCP): Google Play's key added
+        $this->client->request('POST', 'http://' . self::APP . '/mcp', [], [], ['HTTP_AUTHORIZATION' => 'Bearer jph_test', 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'],
+            (string)json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'update_project', 'arguments' => [
+                'slug' => 'test-game', 'android_package' => 'io.github.tester.test_game', 'android_fingerprints' => [str_repeat('AB', 32), str_repeat('CD', 32)]]]]));
+        $result = json_decode((string)$this->client->getResponse()->getContent(), true)['result'];
+        self::assertCount(2, $result['structuredContent']['android']['fingerprints']);
+        $this->get(self::APP, '/.well-known/assetlinks.json');
+        self::assertCount(2, json_decode((string)$this->client->getResponse()->getContent(), true)[0]['target']['sha256_cert_fingerprints']);
     }
 
     public function testOlderVersionsPlayedAndEdited(): void

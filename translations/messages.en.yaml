@@ -471,7 +471,7 @@
 "Problème": "Issue"
 "Importé dans votre espace : vos fichiers modifiés de ce jeu sont maintenant ceux-là. « Envoyer sur GitHub » ou « Forker pour garder » pour les publier.": "Imported into your space: your changed files of this game are now these. “Send to GitHub” or “Fork to keep” to publish them."
 "Rien à importer : aucun fichier modifié.": "Nothing to import: no changed file."
-"Chaque modification enregistrée relance le jeu tout de suite": "Each change saved relaunches the game at once"
+"Chaque modification enregistrée va dans le jeu, sans le recharger": "Each change saved goes into the game, without reloading it"
 "En direct": "Live"
 "Voir les suivants (%count% en tout)": "See the next ones (%count% in all)"
 "Version %sha% ouverte : %files% fichier(s) diffèrent de la version en ligne.": "Version %sha% opened: %files% file(s) differ from the online version."
@@ -495,3 +495,38 @@
 "Pas de jeu dans cette version.": "No game in this version."
 "Cette version ne se publie pas : %errors%": "This version does not publish: %errors%"
 "Aucun moteur JumPHP pour cette version.": "No JumPHP engine for this version."
+'Visites, parties, notes, avis': 'Visits, games, marks, reviews'
+Statistiques: Statistics
+'Statistiques de %title% – studio JumPHP': '%title% statistics – JumPHP studio'
+'Vos propres visites et parties ne comptent pas, ni celles des robots. Les jours sont comptés depuis la mise en place des statistiques.': 'Your own visits and games are not counted, nor the robots''. Days are counted since statistics were set up.'
+'Visites de la page du jeu': 'Visits of the game''s page'
+'Parties lancées': 'Games played'
+'Lancements du jeu installé': 'Launches of the installed game'
+'30 derniers jours · %total% en tout': 'last 30 days · %total% in all'
+'Parties depuis la publication': 'Games since it was published'
+'tous joueurs confondus': 'all players'
+'30 derniers jours': 'last 30 days'
+'aujourd''hui': today
+Notes: Marks
+'%rating%/5, %count% note(s)': '%rating%/5, %count% mark(s)'
+'Pas encore de note.': 'No mark yet.'
+'Forks (jeux faits à partir du vôtre)': 'Forks (games made from yours)'
+'Les chiffres jour par jour': 'Day by day'
+Jour: Day
+'Pas de connexion : le site reviendra avec le réseau.': 'No connection: the site will be back with the network.'
+'Installer JumPHP comme une application': 'Install JumPHP as an app'
+'Installer l''appli JumPHP': 'Install the JumPHP app'
+'Application Android (Google Play)': 'Android app (Google Play)'
+'Votre jeu en appli Android, plein écran : <code>bin/jumphp twa %id% --url %url%</code> la fabrique et donne l''empreinte de votre clé. Déclarez-les ici pour que %host% reconnaisse l''appli (sans barre d''adresse). <a href="%doc%">Le guide</a>.': 'Your game as a full screen Android app: <code>bin/jumphp twa %id% --url %url%</code> builds it and gives your key''s fingerprint. Declare them here so that %host% recognises the app (no address bar). <a href="%doc%">The guide</a>.'
+'Nom du paquet': 'Package name'
+'Empreintes SHA-256 des clés (une par ligne)': 'SHA-256 fingerprints of the keys (one per line)'
+'Celle de votre clé (bin/jumphp twa), puis celle de Google Play (Play Console › Configuration › Signature de l''application). Un paquet vide retire l''appli.': 'Your key''s (bin/jumphp twa), then Google Play''s (Play Console › Setup › App signing). An empty package removes the app.'
+'Appli Android enregistrée.': 'Android app saved.'
+'Appli Android retirée.': 'Android app removed.'
+'Nom de paquet Android invalide (par exemple io.github.moi.mon_jeu).': 'Invalid Android package name (for example io.github.me.my_game).'
+'Empreinte SHA-256 invalide (32 octets, AA:BB:…).': 'Invalid SHA-256 fingerprint (32 bytes, AA:BB:…).'
+'Il faut 1 à 4 empreintes SHA-256 (votre clé, et celle de Google Play).': '1 to 4 SHA-256 fingerprints are needed (your key, and Google Play''s).'
+'Sur Google Play (Android)': 'On Google Play (Android)'
+Console: Console
+Effacer: Clear
+'Ce que le PHP du jeu écrit (echo, var_dump, print_r, phpinfo(), les avertissements) s''affiche ici.': 'What the game''s PHP writes (echo, var_dump, print_r, phpinfo(), warnings) shows here.'

@@ -26,6 +26,7 @@
 						<td><span class="badge {{ project.status }}">{{ project.status }}</span> {% if project.listed %}<span class="badge">{{ 'annuaire'|trans }}</span>{% endif %}
 							{% if pending[project.id] ?? 0 %}<a class="badge creating" href="{{ path('game_comments', {slug: project.slug, section: 'commentaires'}) }}#retours">{{ '%count% à valider'|trans({'%count%': pending[project.id]}) }}</a>{% endif %}</td>
 						<td class="size">{{ project.publishedAt ? 'publié le %date%'|trans({'%date%': project.publishedAt|date('d/m/Y H:i')}) : 'pas encore publié'|trans }}</td>
+						<td class="size"><a class="btn small" href="{{ path('studio_stats', {slug: project.slug}) }}" title="{{ 'Visites, parties, notes, avis'|trans }}">📊 {{ 'Statistiques'|trans }}</a></td>
 					</tr>
 				{% endfor %}
 			</table>

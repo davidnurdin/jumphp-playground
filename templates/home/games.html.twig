@@ -2,16 +2,13 @@
 {% block title %}{{ 'Tous les jeux · JumPHP playground'|trans }}{% endblock %}
 {% block description %}{{ 'Tous les jeux rétro écrits en PHP avec JumPHP, gratuits et jouables dans le navigateur : classés par note, par nombre de parties, par date ou par nom.'|trans }}{% endblock %}
 {% block body_class %}wall-page{% endblock %}
-{% block header %}
-<header class="wall-top">
-	<a class="logo" href="{{ path('home') }}" title="{{ 'Accueil'|trans }}"><span><b>JUM</b>PHP</span><small>playground</small></a>
+{% block body %}
+<div class="wall-top">
+	<h1>{{ 'Tous les jeux'|trans }}</h1>
 	<nav class="sorts" aria-label="{{ 'Classer les jeux'|trans }}">
 		{% for key, label in sorts %}<a href="{{ path('games', key == 'note' ? {} : {tri: key}) }}" class="{{ key == sort ? 'on' }}"{{ key == sort ? ' aria-current="page"' }}>{{ label|trans }}</a>{% endfor %}
 	</nav>
-</header>
-{% endblock %}
-{% block body %}
-<h1 class="sr-only">{{ 'Tous les jeux'|trans }}</h1>
+</div>
 <div class="wall">
 	{% for game in games.items %}
 		<a class="tile" href="{{ path('game', {slug: game.slug}) }}">

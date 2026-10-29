@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * Each game installable on its own (a PWA): its manifest (start: the player /<slug>/jouer), its icons, and a
+ * The site installable as an app (its manifest, its worker; icons in public/icons/), and each game on its own (a PWA): its manifest (start: the player /<slug>/jouer), its icons, and a
  * service worker whose scope is the game's address. The install button: templates/game/_install.html.twig.
  */
 #[Route(condition: "request.getHost() != env('PLAY_HOST')")]
@@ -38,7 +38,7 @@ final class PwaController extends AbstractController
         $response = new JsonResponse([
             'id' => "/$slug",
             'name' => $project->getTitle(),
-            'short_name' => self::shortName($project->getTitle()),
+            'short_name' => $project->getAppName(),
             'description' => $project->getDescription(),
             'lang' => 'fr',
             'start_url' => "/$slug/jouer?app=1",
@@ -54,13 +54,65 @@ final class PwaController extends AbstractController
         return $response->setEncodingOptions(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
+    /** The site itself as an app (JumPHP playground on the home screen; base.html.twig). */
+    #[Route('/manifest.webmanifest', name: 'site_manifest', methods: ['GET'])]
+    public function siteManifest(TranslatorInterface $translator): JsonResponse
+    {
+        $icon = fn (string $name, int $size, string $purpose = 'any') => ['src' => "/icons/$name.png", 'sizes' => "{$size}x$size", 'type' => 'image/png', 'purpose' => $purpose];
+        $response = new JsonResponse([
+            'id' => '/',
+            'name' => 'JumPHP playground',
+            'short_name' => 'JumPHP',
+            'description' => $translator->trans('Des jeux rétro écrits en PHP avec JumPHP, gratuits et jouables tout de suite dans le navigateur. Créez le vôtre en le décrivant à votre Claude.'),
+            'start_url' => '/?app=1',
+            'scope' => '/',
+            'display' => 'standalone',
+            'background_color' => '#0b0e1f',
+            'theme_color' => '#0b0e1f',
+            'categories' => ['games', 'entertainment'],
+            'icons' => [$icon('icon-192', 192), $icon('icon-512', 512), $icon('maskable-512', 512, 'maskable')],
+            'shortcuts' => [
+                ['name' => $translator->trans('Jeux'), 'url' => $this->generateUrl('games')],
+                ['name' => $translator->trans('Bac à sable'), 'url' => $this->generateUrl('sandbox')],
+                ['name' => $translator->trans('Mes jeux'), 'url' => $this->generateUrl('studio')],
+            ],
+        ], 200, ['Content-Type' => 'application/manifest+json', 'Cache-Control' => 'public, max-age=3600', 'Vary' => 'Accept-Language, Cookie']);
+        return $response->setEncodingOptions(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * The Android apps this site lets show its pages full screen (Digital Asset Links): each game's app on Google
+     * Play, made with JumPHP's `bin/jumphp twa` and declared by its creator (studio, MCP update_project).
+     */
+    #[Route('/.well-known/assetlinks.json', name: 'asset_links', methods: ['GET'])]
+    public function assetLinks(): JsonResponse
+    {
+        $statements = array_map(fn (Project $p) => [
+            'relation' => ['delegate_permission/common.handle_all_urls'],
+            'target' => ['namespace' => 'android_app', 'package_name' => $p->getAndroidPackage(), 'sha256_cert_fingerprints' => $p->getAndroidFingerprints()],
+        ], $this->projects->withAndroidApp());
+        return (new JsonResponse($statements, 200, ['Cache-Control' => 'public, max-age=300']))->setEncodingOptions(JSON_UNESCAPED_SLASHES);
+    }
+
+    #[Route('/sw.js', name: 'site_sw', methods: ['GET'])]
+    public function siteServiceWorker(TranslatorInterface $translator): Response
+    {
+        return $this->worker('/', $translator->trans('Pas de connexion : le site reviendra avec le réseau.'));
+    }
+
     /** The game's worker: needed to install it; the pages always come from the network (the game caches its own files). */
     #[Route('/{slug}/sw.js', name: 'game_sw', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -5)]
     public function serviceWorker(string $slug, TranslatorInterface $translator): Response
     {
         $this->published($slug);
+        return $this->worker("/$slug", $translator->trans('Pas de connexion : le jeu reviendra avec le réseau.'));
+    }
+
+    /** a worker that only makes an app installable: pages from the network; offline, $offline */
+    private function worker(string $scope, string $offline): Response
+    {
         $js = <<<'JS'
-// A game of the JumPHP playground, installed as an app: the pages come from the network; offline, a message.
+// The JumPHP playground (or one of its games), installed as an app: the pages come from the network; offline, a message.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (event) => {
@@ -70,11 +122,11 @@ self.addEventListener('fetch', (event) => {
 		{ headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
 });
 JS;
-        $js = strtr($js, ['%offline%' => htmlspecialchars($translator->trans('Pas de connexion : le jeu reviendra avec le réseau.'), ENT_QUOTES)]);
+        $js = strtr($js, ['%offline%' => htmlspecialchars($offline, ENT_QUOTES)]);
         return new Response($js, 200, [
             'Content-Type' => 'text/javascript; charset=utf-8',
             'Cache-Control' => 'no-cache',
-            'Service-Worker-Allowed' => "/$slug",
+            'Service-Worker-Allowed' => $scope,
         ]);
     }
 
@@ -91,19 +143,6 @@ JS;
         $response->headers->set('Content-Type', 'image/png');
         $response->headers->set('Cache-Control', 'public, max-age=31536000, immutable');
         return $response;
-    }
-
-    /** the name under the icon: whole words, 15 characters at most */
-    private static function shortName(string $title): string
-    {
-        $name = '';
-        foreach (preg_split('/\s+/', trim($title)) ?: [] as $word) {
-            if (mb_strlen(trim("$name $word")) > 15) {
-                break;
-            }
-            $name = trim("$name $word");
-        }
-        return $name !== '' ? $name : mb_substr($title, 0, 15);
     }
 
     private function published(string $slug): Project

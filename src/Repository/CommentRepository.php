@@ -39,6 +39,14 @@ class CommentRepository extends ServiceEntityRepository
     }
 
     /** @return array<int, int> project id => anonymous comments waiting, for the games of an owner */
+    /** @return array<string, int> the messages on a game by kind (comment, idea, issue), approved or not */
+    public function countsByKind(Project $project): array
+    {
+        $rows = $this->createQueryBuilder('m')->select('m.kind AS kind, COUNT(m.id) AS n')->where('m.project = :p')
+            ->setParameter('p', $project)->groupBy('m.kind')->getQuery()->getArrayResult();
+        return array_replace(array_fill_keys(array_values(Comment::SECTIONS), 0), array_column(array_map(fn ($r) => [$r['kind'], (int)$r['n']], $rows), 1, 0));
+    }
+
     public function pendingByProject(User $owner): array
     {
         $rows = $this->createQueryBuilder('m')->select('IDENTITY(m.project) AS project, COUNT(m.id) AS n')

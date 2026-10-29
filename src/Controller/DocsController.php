@@ -26,6 +26,7 @@ final class DocsController extends AbstractController
             'remake-amstrad' => 'Remake Amstrad CPC',
             'portage' => 'Porter un jeu existant',
             'tests' => 'Tester son jeu (PHPUnit)',
+            'android' => 'Sur Google Play (Android)',
         ],
         'Tutoriels' => [
             'hello-world' => '1. Hello world',
@@ -58,6 +59,11 @@ final class DocsController extends AbstractController
         }
         $markdown = (string)file_get_contents($file);
         $html = (string)(new GithubFlavoredMarkdownConverter(['html_input' => 'allow', 'allow_unsafe_links' => false]))->convert($markdown);
+        // each section can be linked to (#garder-letat-dune-scène): its title, lower case, spaces as dashes
+        $html = (string)preg_replace_callback('#<h([23])>(.+?)</h\1>#u', static function (array $m): string {
+            $id = trim((string)preg_replace(['/<[^>]+>|&#?\w+;|[^\p{L}\p{N} -]/u', '/ /'], ['', '-'], mb_strtolower(html_entity_decode($m[2], ENT_QUOTES))), '-');
+            return "<h$m[1] id=\"" . htmlspecialchars($id) . "\">$m[2]</h$m[1]>";
+        }, $html);
         preg_match('/^# (.+)$/m', $markdown, $title);
         preg_match('/^(?!#)(?!\|)(?!```)(\S.+)$/m', $markdown, $first);
         $titles = array_merge(...array_values(self::PAGES));

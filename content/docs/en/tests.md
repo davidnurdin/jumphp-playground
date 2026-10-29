@@ -83,7 +83,7 @@ pickup, an enemy, the end of a level) gets a test that plays it, run after each 
 
 ## The sandbox
 
-The tests run on the playground's server, isolated: PHP 8.3 (as the engine in the browser), PHPUnit 11,
+The tests run on the playground's server, isolated: PHP 8.5 (as the engine in the browser), PHPUnit 11,
 **no network**, as a user without rights, **120 seconds** and 256 MB at most, no window or sound (SDL runs
 “blank”: the game tests still draw every frame, for the film). The game's private files are not there. Only the
 game's owner sees the results and the films (those of the last 5 runs are kept).

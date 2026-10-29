@@ -1,7 +1,7 @@
-# The tester: the games' PHPUnit tests in a sandbox (runner.php). PHP 8.3 with the SDL extensions of JumPHP's
+# The tester: the games' PHPUnit tests in a sandbox (runner.php). PHP 8.5 with the SDL extensions of JumPHP's
 # desktop runtime (the same forks and commits: JumPHP docker/desktop), so that the game tests (GameTestCase)
 # play the game, without a window (SDL dummy drivers), and are filmed.
-FROM php:8.3-cli-bookworm
+FROM php:8.5-cli-bookworm
 ARG PHPUNIT=11.5.57
 ARG PHP_SDL_REF=89855c8f4f63b77f9a548007b9c4afe366785b4b
 ARG SDL_IMAGE_REF=fd798eb2c52b7be5874a30334d1d255436aa686e
@@ -16,10 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fetch() { mkdir -p "$3" && cd "$3" && git init -q && git remote add origin "https://github.com/$1.git" \
               && git fetch -q --depth 1 origin "$2" && git checkout -q FETCH_HEAD; }; \
     fetch davidnurdin/php-sdl   "$PHP_SDL_REF"   /usr/src/ext-sdl; \
+    sed -i 's/zend_exception_get_default()/zend_ce_exception/g' /usr/src/ext-sdl/src/*.c /usr/src/ext-sdl/src/*.h; \
     fetch kea/php-sdl-image     "$SDL_IMAGE_REF" /usr/src/ext-sdl_image; \
     fetch kea/php-sdl-mixer     "$SDL_MIXER_REF" /usr/src/ext-sdl_mixer; \
     fetch kea/php-sdl-ttf       "$SDL_TTF_REF"   /usr/src/ext-sdl_ttf; \
-    build() { cd "$1" && phpize && ./configure $2 && make -j"$(nproc)" && make install; }; \
+    build() { cd "$1" && phpize && ./configure $2 CFLAGS="-O2 -Werror=implicit-function-declaration" && make -j"$(nproc)" && make install; }; \
     build /usr/src/ext-sdl       --with-sdl; \
     build /usr/src/ext-sdl_image --with-sdl_image; \
     build /usr/src/ext-sdl_mixer --with-sdl_mixer; \

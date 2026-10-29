@@ -25,6 +25,8 @@ Ensuite, les **tutoriels** construisent un jeu pas à pas :
 7. [Le multijoueur en ligne](/docs/multijoueur)
 8. [La page d'accueil du jeu et sa publication](/docs/page-du-jeu)
 
+Une fois le jeu fini : [le mettre sur Google Play](/docs/android) (une appli Android, faite par `bin/jumphp twa`).
+
 Et pour les programmes qui veulent lire l'annuaire : [l'API publique](/docs/api).
 
 ## Comment marche un jeu JumPHP

@@ -7,6 +7,7 @@ use App\Entity\Project;
 use App\Entity\User;
 use App\GitHub\GitHub;
 use App\Repository\CommentRepository;
+use App\Repository\GameDayRepository;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\RatingRepository;
@@ -74,9 +75,12 @@ final class GameController extends AbstractController
     }
 
     #[Route('/{slug}', name: 'game', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -10)]
-    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs, Request $request, RatingRepository $ratings, Voters $voters, CommentRepository $comments): Response
+    public function show(string $slug, #[CurrentUser] ?User $user, Slugs $slugs, Request $request, RatingRepository $ratings, Voters $voters, CommentRepository $comments, GameDayRepository $days): Response
     {
         $project = $this->visible($slug, $user);
+        if (!$project->isOwnedBy($user)) {
+            $days->tally($project, 'visits', $request);
+        }
         // the section of the players' messages shown under the game (?retours=idees|problemes)
         $section = (string)$request->query->get('retours');
         $section = isset(Comment::SECTIONS[$section]) ? $section : 'commentaires';
@@ -92,13 +96,16 @@ final class GameController extends AbstractController
     }
 
     #[Route('/{slug}/jouer', name: 'game_play', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -10)]
-    public function playPage(string $slug, #[CurrentUser] ?User $user, Request $request, RatingRepository $ratings, Voters $voters): Response
+    public function playPage(string $slug, #[CurrentUser] ?User $user, Request $request, RatingRepository $ratings, Voters $voters, GameDayRepository $days): Response
     {
         $project = $this->visible($slug, $user);
         if (!$project->isPublished()) {
             return $this->redirectToRoute('game', ['slug' => $slug]);
         }
         $this->projects->addPlay($project);
+        if (!$project->isOwnedBy($user)) { // the creator's own visits and games are not in their statistics
+            $days->tally($project, $request->query->has('app') ? 'launches' : 'plays', $request);
+        }
         return $this->render('game/play.html.twig', ['project' => $project, 'frame' => $this->play($project) . '/play/',
             'my_rating' => $ratings->scoreOf($project, $voters->of($request, $user))]);
     }

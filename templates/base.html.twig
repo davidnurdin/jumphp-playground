@@ -4,8 +4,9 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	{# the title block is escaped already (an apostrophe is &#039;): printed |raw, else the tab says &amp;#039; #}
 	{% set page_title = block('title') is defined ? block('title')|trim : '' %}
-	<title>{{ page_title ?: ('JumPHP playground : jeux rétro en PHP, jouables dans le navigateur'|trans) }}</title>
+	<title>{{ page_title ? page_title|raw : ('JumPHP playground : jeux rétro en PHP, jouables dans le navigateur'|trans) }}</title>
 	<meta name="description" content="{% block description %}{{ 'Des jeux rétro écrits en PHP avec JumPHP, gratuits et jouables tout de suite dans le navigateur. Créez le vôtre en le décrivant à votre Claude.'|trans }}{% endblock %}">
 	{% set page_url = app_url|trim('/', 'right') ~ app.request.pathInfo %}
 	{% block canonical %}<link rel="canonical" href="{{ page_url ~ (lang == 'en' ? '?lang=en') }}">{% endblock %}
@@ -21,15 +22,21 @@
 	<meta property="og:locale" content="{{ lang == 'en' ? 'en_US' : 'fr_FR' }}">
 	<meta property="og:locale:alternate" content="{{ lang == 'en' ? 'fr_FR' : 'en_US' }}">
 	<meta property="og:type" content="{% block og_type %}website{% endblock %}">
-	<meta property="og:title" content="{{ page_title ?: 'JumPHP playground' }}">
+	<meta property="og:title" content="{{ page_title ? page_title|raw : 'JumPHP playground' }}">
 	<meta property="og:description" content="{{ block('description')|trim }}">
 	<meta property="og:url" content="{{ page_url ~ (lang == 'en' ? '?lang=en') }}">
 	<meta property="og:image" content="{% block og_image %}{{ app_url|trim('/', 'right') }}/og.png{% endblock %}">
 	{% block og_image_size %}<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">{% endblock %}
-	<meta property="og:image:alt" content="{{ page_title ?: 'JumPHP playground' }}">
+	<meta property="og:image:alt" content="{{ page_title ? page_title|raw : 'JumPHP playground' }}">
 	<meta name="twitter:card" content="summary_large_image">
 	{% block head %}{% endblock %}
-	{% block pwa %}{% endblock %}
+	{% block pwa %}
+	{# the site as an app (PwaController::siteManifest); a game's pages have their own #}
+	<link rel="manifest" href="{{ path('site_manifest') }}">
+	<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="JumPHP">
+	{% endblock %}
 	{% block javascripts %}{{ importmap('app') }}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -73,6 +80,17 @@
 	<div class="wrap">
 		<span>{{ 'Jeux écrits en PHP avec <a href="https://github.com/davidnurdin/jumPhp">JumPHP</a> : le même code sur le bureau et dans le navigateur (WebAssembly).'|trans|raw }}</span>
 		<span><a href="{{ path('categories') }}">{{ 'Annuaire'|trans }}</a> · <a href="{{ path('docs') }}">{{ 'Documentation'|trans }}</a> · <a href="{{ path('sandbox') }}">{{ 'Bac à sable'|trans }}</a> · <a href="{{ path('docs_page', {page: 'api'}) }}">API</a> · <a href="{{ path('studio') }}">{{ 'Créer un jeu'|trans }}</a> · <a href="https://github.com/davidnurdin/jumphp-playground">{{ 'Code du site'|trans }}</a></span>
+		{% block site_install %}
+		<div class="install" data-install="{{ path('site_sw') }}" data-scope="/" hidden>
+			<button class="btn small" type="button" title="{{ 'Installer JumPHP comme une application'|trans }}">
+				<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 3h2v9.2l3.3-3.3 1.4 1.4L12 16l-5.7-5.7 1.4-1.4 3.3 3.3zM5 18h14v2H5z"/></svg>
+				<span>{{ 'Installer l\'appli JumPHP'|trans }}</span>
+			</button>
+			<div class="share-menu install-help" hidden>
+				<p>{{ 'Sur iPhone / iPad : touchez <b>Partager</b> <span aria-hidden="true">⎋</span> en bas de Safari, puis <b>« Sur l\'écran d\'accueil »</b>.'|trans|raw }}</p>
+			</div>
+		</div>
+		{% endblock %}
 	</div>
 </footer>
 {% endblock %}

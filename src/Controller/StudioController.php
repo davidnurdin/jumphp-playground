@@ -9,6 +9,8 @@ use App\Message\ShootProject;
 use App\Repository\CategoryRepository;
 use App\Repository\CommentRepository;
 use App\Repository\DraftRepository;
+use App\Repository\GameDayRepository;
+use App\Repository\RatingRepository;
 use App\Repository\NoteRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\SandboxShareRepository;
@@ -157,6 +159,41 @@ final class StudioController extends AbstractController
             'categories' => $this->categories->ordered(),
             'mcp_url' => rtrim($this->appUrl, '/') . '/mcp',
         ]);
+    }
+
+    /** A game's numbers for its creator: visits, games played, launches of the installed game, day by day; marks, messages, forks. */
+    #[Route('/projet/{slug}/statistiques', name: 'studio_stats', methods: ['GET'])]
+    public function stats(string $slug, #[CurrentUser] User $user, GameDayRepository $days, RatingRepository $ratings, CommentRepository $comments): Response
+    {
+        $project = $this->owned($slug, $user);
+        $last = $days->lastDays($project, 30);
+        return $this->render('studio/stats.html.twig', [
+            'project' => $project,
+            'days' => $last,
+            'totals' => $days->totals($project),
+            'month' => array_combine(GameDayRepository::FIELDS, array_map(fn ($f) => array_sum(array_column($last, $f)), GameDayRepository::FIELDS)),
+            'ratings' => $ratings->spread($project),
+            'messages' => $comments->countsByKind($project),
+            'forks' => $this->projects->count(['forkOf' => $project]),
+        ]);
+    }
+
+    /** The game's Android app (Google Play): its package and keys, said by /.well-known/assetlinks.json. */
+    #[Route('/projet/{slug}/android', name: 'studio_android', methods: ['POST'])]
+    public function android(string $slug, Request $request, #[CurrentUser] User $user): Response
+    {
+        $project = $this->owned($slug, $user);
+        if (!$this->isCsrfTokenValid('studio-project-' . $project->getId(), (string)$request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+        try {
+            $project->setAndroid((string)$request->request->get('package'), preg_split('/[\s,]+/', (string)$request->request->get('fingerprints')) ?: []);
+            $this->em->flush();
+            $this->addFlash('success', $project->getAndroidPackage() ? 'Appli Android enregistrée.' : 'Appli Android retirée.');
+        } catch (\InvalidArgumentException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+        return $this->redirect($this->generateUrl('studio_project', ['slug' => $slug]) . '#android');
     }
 
     #[Route('/projet/{slug}/sync', name: 'studio_sync', methods: ['POST'])]

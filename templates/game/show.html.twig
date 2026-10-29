@@ -10,6 +10,7 @@
 {% block og_image_size %}{% if not (site and site.image) %}{{ parent() }}{% endif %}{% endblock %}
 {% block head %}{% if project.publishedSha %}{% include 'game/_jsonld.html.twig' %}{% endif %}{% if not project.listed %}<meta name="robots" content="noindex">{% endif %}{% endblock %}
 {% block pwa %}{% include 'game/_pwa_head.html.twig' %}{% endblock %}
+{% block site_install %}{% endblock %}
 {% block body_class %}{{ frame ? 'full' }}{% endblock %}
 {% block body %}
 {% if not project.publishedSha %}

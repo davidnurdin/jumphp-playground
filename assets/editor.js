@@ -20,6 +20,10 @@ const T = document.documentElement.lang === 'en' ? {
 	draft: 'modified (draft)', same: 'same as the published version', saved: 'saved', error: 'error: ',
 	sending: 'sending…', sent: (sha) => `sent: ${sha} (publishing)`,
 	confirmDelete: (path) => `Delete ${path} (in your changes)?`,
+	hotError: 'The game stopped on an error (see the preview): fix it, it starts again by itself.',
+	consoleStart: '— the game starts —',
+	consoleRestart: '— PHP started again (hot reload) —',
+	consoleDropped: (n) => `… ${n} more lines not shown (too many at once)`,
 	confirmReset: 'Erase all your changes and start again from the original game?', reset: 'Everything is back to the original.',
 	making: 'making the link…', copied: 'Copied!', until: (date) => `Works until ${date}.`, forever: 'Works with no end date.',
 } : {
@@ -27,6 +31,10 @@ const T = document.documentElement.lang === 'en' ? {
 	draft: 'modifié (brouillon)', same: 'identique à la version publiée', saved: 'enregistré', error: 'erreur : ',
 	sending: 'envoi…', sent: (sha) => `envoyé : ${sha} (publication en cours)`,
 	confirmDelete: (path) => `Supprimer ${path} (dans vos modifications) ?`,
+	hotError: 'Le jeu s\'est arrêté sur une erreur (voir l\'aperçu) : corrigez-la, il repart tout seul.',
+	consoleStart: '— le jeu démarre —',
+	consoleRestart: '— PHP redémarré (rechargement à chaud) —',
+	consoleDropped: (n) => `… ${n} lignes de plus non affichées (trop d'un coup)`,
 	confirmReset: 'Effacer toutes vos modifications et repartir du jeu d\'origine ?', reset: 'Tout est revenu à l\'origine.',
 	making: 'création du lien…', copied: 'Copié !', until: (date) => `Valable jusqu'au ${date}.`, forever: 'Valable sans date de fin.',
 };
@@ -211,30 +219,133 @@ if (root) {
 	function confirmDelete(path) { return window.confirm(T.confirmDelete(path)); }
 
 	const preview = $('preview');
+	let isReady = false; // the game in the preview runs (it said jumphp:ready): it can take a hot reload
 	async function play() {
 		await flush();
 		root.classList.remove('no-preview');
+		isReady = false;
 		preview.src = (await api('GET', '/preview')).url;
 	}
 	$('btn-preview').addEventListener('click', play);
 	$('btn-reload').addEventListener('click', play);
 	root.classList.add('no-preview');
 
-	// live: each change saved relaunches the game on the right (the engine stays in the browser's cache: a
-	// relaunch takes a fraction of a second); typing stays in the editor
+	// live: each change saved goes into the game on the right without reloading it (hot reload: the engine
+	// takes the changed files; pictures, sounds, texts in place, code by PHP started again in the same engine,
+	// in the scene that was playing). An engine without hot reload, or no answer: the game is relaunched (the
+	// engine stays in the browser's cache: a fraction of a second); typing stays in the editor
 	const liveBox = $('live');
 	try { liveBox.checked = localStorage.getItem('jumphp-editor-live') !== '0'; } catch (e) { /* no storage */ }
 	liveBox.addEventListener('change', () => { try { localStorage.setItem('jumphp-editor-live', liveBox.checked ? '1' : '0'); } catch (e) { /* no storage */ } });
 	let isLiveReload = false;
-	function live() {
-		if (!liveBox.checked || root.classList.contains('no-preview')) return;
+	let hotWait = null;
+	function relaunch() {
 		isLiveReload = true;
+		isReady = false;
 		play().catch((e) => say(e.message));
 	}
+	function live() {
+		if (!liveBox.checked || root.classList.contains('no-preview')) return;
+		if (!isReady || hotWait) {
+			if (!hotWait) relaunch();
+			return;
+		}
+		hotWait = setTimeout(() => { hotWait = null; relaunch(); }, 4000);
+		preview.contentWindow.postMessage({ type: 'jumphp:hot' }, '*');
+	}
 	addEventListener('message', (event) => {
-		if (event.source !== preview.contentWindow || event.data?.type !== 'jumphp:ready' || !isLiveReload) return;
-		isLiveReload = false;
-		current?.view?.focus();
+		if (event.source !== preview.contentWindow) return;
+		if (event.data?.type === 'jumphp:ready') {
+			isReady = true;
+			if (!isLiveReload) return;
+			isLiveReload = false;
+			current?.view?.focus();
+		} else if (event.data?.type === 'jumphp:hot-done') {
+			clearTimeout(hotWait);
+			hotWait = null;
+			if (event.data.result === 'error') say(T.hotError + (event.data.message ? ' ' + event.data.message.split('\n')[0].replace(/^\[jumphp\] BOOT FAILED: /, '') : ''));
+			current?.view?.focus();
+		}
+	});
+
+	// the console: what the game's PHP writes (the engine sends it, jumphp:output); text as it comes, a whole
+	// HTML page (phpinfo()) shown as a page in a frame without scripts. Closed by default; a count of the new lines.
+	const consoleBox = $('console');
+	const consoleLog = $('console-log');
+	const consoleCount = $('console-count');
+	const CONSOLE_MAX = 3000;
+	let consoleNew = 0;
+	let consoleErrors = false;
+	let consoleHtml = null; // the lines of an HTML page being received
+	let consoleEmpty = true;
+	function consoleAdd(node) {
+		if (consoleEmpty) { consoleLog.replaceChildren(); consoleEmpty = false; }
+		const atBottom = consoleLog.scrollHeight - consoleLog.scrollTop - consoleLog.clientHeight < 30;
+		consoleLog.append(node);
+		while (consoleLog.childElementCount > CONSOLE_MAX) consoleLog.firstElementChild.remove();
+		if (atBottom) consoleLog.scrollTop = consoleLog.scrollHeight;
+	}
+	function consoleText(stream, text) {
+		const last = consoleLog.lastElementChild;
+		if (last?.tagName === 'PRE' && last.dataset.stream === stream && last.textContent.length < 20000) {
+			last.append('\n' + text);
+			if (consoleLog.scrollHeight - consoleLog.scrollTop - consoleLog.clientHeight < 60) consoleLog.scrollTop = consoleLog.scrollHeight;
+			return;
+		}
+		const pre = document.createElement('pre');
+		pre.dataset.stream = stream;
+		if (stream === 'err') pre.className = 'err';
+		pre.textContent = text;
+		consoleAdd(pre);
+	}
+	function consolePage(html) {
+		const frame = document.createElement('iframe');
+		frame.sandbox = ''; // no script, an origin of its own: only its HTML and CSS
+		frame.title = 'phpinfo()';
+		frame.srcdoc = html;
+		consoleAdd(frame);
+	}
+	function consoleSeparator(text) {
+		if (consoleEmpty) return;
+		const p = document.createElement('div');
+		p.className = 'sep';
+		p.textContent = text;
+		consoleAdd(p);
+	}
+	function consoleBadge() {
+		consoleCount.hidden = consoleBox.open || !consoleNew;
+		consoleCount.textContent = consoleNew > 999 ? '999+' : String(consoleNew);
+		consoleCount.classList.toggle('err', consoleErrors);
+	}
+	consoleBox.addEventListener('toggle', () => {
+		if (consoleBox.open) { consoleNew = 0; consoleErrors = false; consoleLog.scrollTop = consoleLog.scrollHeight; }
+		consoleBadge();
+	});
+	$('console-clear').addEventListener('click', (event) => {
+		event.preventDefault();
+		consoleLog.replaceChildren();
+		consoleHtml = null;
+		consoleEmpty = true;
+	});
+	addEventListener('message', (event) => {
+		if (event.source !== preview.contentWindow) return;
+		const data = event.data;
+		if (data?.type === 'jumphp:ready') consoleSeparator(T.consoleStart);
+		else if (data?.type === 'jumphp:hot-done' && data.result === 'restart') consoleSeparator(T.consoleRestart);
+		if (data?.type !== 'jumphp:output' || !Array.isArray(data.lines)) return;
+		for (const [stream, text] of data.lines) {
+			const line = String(text);
+			if (consoleHtml === null && /^\s*<!DOCTYPE html|^\s*<html[\s>]/i.test(line)) consoleHtml = [];
+			if (consoleHtml !== null) {
+				consoleHtml.push(line);
+				if (/<\/html>\s*$/i.test(line) || consoleHtml.length > 20000) { consolePage(consoleHtml.join('\n')); consoleHtml = null; }
+				continue;
+			}
+			consoleText(stream === 'err' ? 'err' : 'out', line);
+			if (stream === 'err') consoleErrors = true;
+		}
+		if (data.dropped) consoleText('err', T.consoleDropped(data.dropped));
+		if (!consoleBox.open) { consoleNew += data.lines.length; consoleBadge(); }
 	});
 
 	$('btn-push')?.addEventListener('click', async () => {

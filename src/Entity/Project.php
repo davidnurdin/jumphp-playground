@@ -101,6 +101,13 @@ class Project
     #[ORM\Column]
     private bool $shotThumbnail = false;
 
+    /**
+     * its Android app on Google Play (JumPHP `bin/jumphp twa`): {package, fingerprints}, said by this site's
+     * /.well-known/assetlinks.json (PwaController::assetLinks) so that the app shows the game full screen
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $android = null;
+
     #[ORM\Column]
     private int $plays = 0;
 
@@ -190,6 +197,65 @@ class Project
     public function isPublished(): bool { return $this->publishedSha !== null; }
     public function getEngineVersion(): ?string { return $this->engineVersion; }
     public function getGameInfo(): array { return $this->gameInfo; }
+
+    public function getAndroidPackage(): ?string { return $this->android['package'] ?? null; }
+
+    /** @return string[] the SHA-256 fingerprints of the keys that sign the Android app (AA:BB:...) */
+    public function getAndroidFingerprints(): array { return $this->android['fingerprints'] ?? []; }
+
+    /**
+     * The game's Android app: its package (io.github.me.my_game) and the fingerprints of its keys (the upload key,
+     * Google Play's), checked; no package: no app.
+     *
+     * @param string[] $fingerprints
+     * @throws \InvalidArgumentException what is wrong, said to the creator
+     */
+    public function setAndroid(?string $package, array $fingerprints): void
+    {
+        $package = trim((string)$package);
+        if ($package === '') {
+            $this->android = null;
+            $this->touch();
+            return;
+        }
+        if (!preg_match('/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/', $package) || strlen($package) > 150) {
+            throw new \InvalidArgumentException('Nom de paquet Android invalide (par exemple io.github.moi.mon_jeu).');
+        }
+        $clean = [];
+        foreach ($fingerprints as $fingerprint) {
+            $hex = strtoupper((string)preg_replace('/[^0-9a-fA-F]/', '', (string)$fingerprint));
+            if ($hex === '') {
+                continue;
+            }
+            if (strlen($hex) !== 64) {
+                throw new \InvalidArgumentException('Empreinte SHA-256 invalide (32 octets, AA:BB:…).');
+            }
+            $clean[] = implode(':', str_split($hex, 2));
+        }
+        $clean = array_values(array_unique($clean));
+        if (!$clean || count($clean) > 4) {
+            throw new \InvalidArgumentException('Il faut 1 à 4 empreintes SHA-256 (votre clé, et celle de Google Play).');
+        }
+        $this->android = ['package' => $package, 'fingerprints' => $clean];
+        $this->touch();
+    }
+
+    /**
+     * The installed game's name under its icon (PWA, Android app): game.yaml pwa.short_name, else the title, without
+     * its leading article when long ("L'Armure Sacrée d'Antiriad": "Armure Sacrée d'Antiriad"); the phone shortens it
+     * itself if it must, never in the middle of a word
+     */
+    public function getAppName(): string
+    {
+        if (is_string($this->gameInfo['short_name'] ?? null) && $this->gameInfo['short_name'] !== '') {
+            return $this->gameInfo['short_name'];
+        }
+        $title = trim($this->title);
+        if (mb_strlen($title) > 20) {
+            $title = (string)preg_replace("/^(?:(?:le|la|les|the|a|an|un|une)\\s+|l['’])/iu", '', $title);
+        }
+        return mb_strtoupper(mb_substr($title, 0, 1)) . mb_substr($title, 1);
+    }
     public function getSite(): ?array { return $this->site; }
     public function hasSite(): bool { return $this->site !== null; }
     public function hasThumbnail(): bool { return $this->hasThumbnail; }

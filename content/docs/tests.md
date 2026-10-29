@@ -88,7 +88,7 @@ moteur le plus récent, et la sortie le dit. Sur votre ordinateur, `bin/jumphp u
 
 ## Le bac à sable
 
-Les tests tournent sur le serveur du playground, isolés : PHP 8.3 (comme le moteur dans le navigateur),
+Les tests tournent sur le serveur du playground, isolés : PHP 8.5 (comme le moteur dans le navigateur),
 PHPUnit 11, **sans réseau**, sous un utilisateur sans droits, **120 secondes** et 256 Mo au plus, sans fenêtre
 ni son (SDL tourne « à blanc » : les tests de jeu dessinent quand même chaque image, pour le film). Les fichiers
 privés du jeu n'y sont pas. Seul le propriétaire du jeu voit les résultats et les films (ceux des 5 dernières
