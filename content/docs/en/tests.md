@@ -30,6 +30,38 @@ The game's code is loaded as in the game (the namespaces of its `composer.json`,
 JumPHP engine of its version. `Tests\` → `tests/`. On your computer, `bin/jumphp test <game>` runs them too
 (with the other checks).
 
+## Tests that play the game
+
+A **game test** plays the game, frame by frame, then checks what happened: “the paddle goes from the top to the
+bottom”, “the ball bounces”, “the jump lands on the platform”. It extends `JumPHP\Testing\GameTestCase`:
+
+```php
+<?php
+namespace Tests;
+
+use App\Entity\Paddle;
+use App\Scene\PlayScene;
+use JumPHP\Testing\GameTestCase;
+
+final class PaddleTest extends GameTestCase
+{
+    public function testThePaddleGoesFromTheTopToTheBottom(): void
+    {
+        $this->game->start(PlayScene::class, ['mode' => 'local']);  // the scene, at once
+        $paddle = $this->game->peek('left');                       // a field of the scene, even private
+        $this->game->hold('p1_up', 60);                            // the key held 60 frames (1 s)
+        self::assertEqualsWithDelta(PlayScene::TOP, $paddle->getBoundingBox()['y'], 1);
+        $this->game->hold('p1_down', 90);
+        self::assertEqualsWithDelta(PlayScene::BOTTOM - Paddle::HEIGHT, $paddle->getBoundingBox()['y'], 1);
+    }
+}
+```
+
+Also: `press($action)`, `run($frames)`, `wait($seconds)`, `scene()`, `shot($name)` (a screenshot). These tests need
+SDL: they run on your computer with `bin/jumphp test`, and **you watch them play** in
+[the JumPHP pane for Claude Code](/docs/panneau-claude) (each test live, then its last frame). The playground's
+sandbox leaves them out and says so.
+
 ## Running them
 
 - **Studio** → your project → **Tests (PHPUnit)** → “▶ Run the tests”: the page updates by itself, then shows

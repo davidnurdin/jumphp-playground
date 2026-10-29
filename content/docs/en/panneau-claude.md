@@ -31,6 +31,10 @@ What it shows:
   `JUMPHP_LIVE`). Runs without a window go faster than real time: `JUMPHP_REALTIME=1` slows them to the game's
   speed. A project made before this option gets it with `git pull jumphp main` (the original JumPHP repository,
   kept under the name `jumphp`).
+- **Game tests, before your eyes**: the [tests that play the game](/docs/tests) show as they run (⏳, then ✔ /
+  ✘), with the running test's name over the live screen; afterwards, press a test to see its last frame. The
+  **🐢 Game speed / ⏩ Fast** button (`r`) picks the speed: the game's (the default, to see the paddle move) or as
+  fast as it goes.
 - **The screens**: the screenshot `bin/jumphp shot` or `siteshot` just made, and every picture Claude opens to look
   at the game, drawn in the pane (kitty, Ghostty, iTerm2 terminals; elsewhere, the file's path).
 - **The playground**: the result of the [site's PHPUnit tests](/docs/tests) (`run_tests`, `get_test_run`) and of

@@ -357,6 +357,8 @@ final class PlaygroundTest extends WebTestCase
         $testsDir = static::getContainer()->getParameter('app.tests_dir');
         (new Filesystem())->remove($testsDir);
         (new Filesystem())->dumpFile("$storage/published/{$this->project->getId()}/" . self::SHA . '/game/tests/ScoreTest.php', "<?php\n");
+        // a game test plays the game (SDL): left out of the sandbox, and said
+        (new Filesystem())->dumpFile("$storage/published/{$this->project->getId()}/" . self::SHA . '/game/tests/PaddleTest.php', "<?php\nfinal class PaddleTest extends \\JumPHP\\Testing\\GameTestCase {}\n");
         $this->get(self::APP, '/studio/projet/test-game');
         $this->client->submit($this->client->getCrawler()->selectButton('▶ Lancer les tests')->form());
         self::assertResponseRedirects();
@@ -364,6 +366,7 @@ final class PlaygroundTest extends WebTestCase
         // what the tester gets: the game, the engine and an autoloader of both
         self::assertFileExists("$testsDir/jobs/$id.json");
         self::assertFileExists("$testsDir/work/$id/tests/ScoreTest.php");
+        self::assertFileDoesNotExist("$testsDir/work/$id/tests/PaddleTest.php");
         self::assertFileExists("$testsDir/work/$id/vendor/autoload_engine.php");
         self::assertStringContainsString("'App\\\\'", (string)file_get_contents("$testsDir/work/$id/vendor/autoload.php"));
         $this->client->followRedirect();
@@ -378,6 +381,7 @@ final class PlaygroundTest extends WebTestCase
         self::assertSelectorNotExists('meta[http-equiv="refresh"]');
         self::assertSelectorTextContains('.test-cases li.failed', 'Failed asserting that 3 is identical to 4.');
         self::assertSelectorTextContains('pre.test-output', 'FAILURES!');
+        self::assertSelectorTextContains('pre.test-output', '1 fichier(s) de tests de jeu');
         self::assertFileDoesNotExist("$testsDir/work/$id");
         // the owner's Claude sees the same; nobody else sees the page
         $this->client->request('POST', 'http://' . self::APP . '/mcp', [], [], [

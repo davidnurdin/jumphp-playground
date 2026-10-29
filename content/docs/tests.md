@@ -31,6 +31,38 @@ Le code du jeu est chargé comme dans le jeu (les espaces de noms de son `compos
 le moteur JumPHP de sa version. `Tests\` → `tests/`. Sur votre ordinateur, `bin/jumphp test <jeu>` les lance
 aussi (avec le reste des vérifications).
 
+## Des tests qui jouent le jeu
+
+Un **test de jeu** fait jouer le jeu, image par image, puis vérifie ce qui s'est passé : « la raquette va de haut
+en bas », « la balle rebondit », « le saut retombe sur la plate-forme ». Il étend `JumPHP\Testing\GameTestCase` :
+
+```php
+<?php
+namespace Tests;
+
+use App\Entity\Paddle;
+use App\Scene\PlayScene;
+use JumPHP\Testing\GameTestCase;
+
+final class PaddleTest extends GameTestCase
+{
+    public function testThePaddleGoesFromTheTopToTheBottom(): void
+    {
+        $this->game->start(PlayScene::class, ['mode' => 'local']);  // la scène, tout de suite
+        $paddle = $this->game->peek('left');                       // un champ de la scène, même privé
+        $this->game->hold('p1_up', 60);                            // la touche tenue 60 images (1 s)
+        self::assertEqualsWithDelta(PlayScene::TOP, $paddle->getBoundingBox()['y'], 1);
+        $this->game->hold('p1_down', 90);
+        self::assertEqualsWithDelta(PlayScene::BOTTOM - Paddle::HEIGHT, $paddle->getBoundingBox()['y'], 1);
+    }
+}
+```
+
+Aussi : `press($action)`, `run($images)`, `wait($secondes)`, `scene()`, `shot($nom)` (une capture). Ces tests ont
+besoin de SDL : ils tournent sur votre ordinateur avec `bin/jumphp test`, et **on les regarde jouer** dans
+[le panneau JumPHP de Claude Code](/docs/panneau-claude) (chaque test en direct, puis sa dernière image). Le bac
+à sable du playground les laisse de côté et le dit.
+
 ## Les lancer
 
 - **Studio** → votre projet → **Tests (PHPUnit)** → « ▶ Lancer les tests » : la page se met à jour toute seule,

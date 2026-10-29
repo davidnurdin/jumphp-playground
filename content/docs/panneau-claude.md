@@ -31,6 +31,10 @@ Ce qu'il montre :
   option `JUMPHP_LIVE`). Les runs sans fenêtre vont plus vite que le temps réel : `JUMPHP_REALTIME=1` les ralentit
   à la vitesse du jeu. Un projet créé avant cette option la récupère avec `git pull jumphp main` (le dépôt JumPHP
   d'origine, gardé sous le nom `jumphp`).
+- **Les tests de jeu, sous vos yeux** : les [tests qui jouent le jeu](/docs/tests) s'affichent pendant qu'ils
+  tournent (⏳, puis ✔ / ✘), avec le nom du test en cours au-dessus de l'écran live ; ensuite, cliquez sur un test
+  pour voir sa dernière image. Le bouton **🐢 Game speed / ⏩ Fast** (`r`) choisit la vitesse : celle du jeu (par
+  défaut, pour voir la raquette bouger) ou le plus vite possible.
 - **Les écrans** : la capture que `bin/jumphp shot` ou `siteshot` vient de faire, et chaque image que Claude ouvre
   pour regarder le jeu, affichées dans le panneau (terminaux kitty, Ghostty, iTerm2 ; ailleurs, le chemin du
   fichier).

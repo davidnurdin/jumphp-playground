@@ -69,6 +69,17 @@ final class TestRunner
             $this->fs->remove(["$work/vendor", "$work/var", "$work/site"]);
             $this->fs->mirror($this->engine((string)$project->getEngineVersion()), "$work/vendor");
             $this->fs->dumpFile("$work/vendor/autoload.php", $this->autoload("$work/composer.json"));
+            // the game tests (JumPHP\Testing\GameTestCase) play the game: they need SDL, which the sandbox has not
+            $games = $this->withoutGameTests("$work/tests");
+            if (!glob("$work/tests/{,*/,*/*/}*Test.php", GLOB_BRACE)) {
+                $this->fs->remove($work);
+                $run->finish(TestRun::ERROR, "Seulement des tests de jeu ($games) : ils jouent le jeu et ont besoin de SDL, ils tournent avec bin/jumphp test sur votre ordinateur, pas ici.");
+                $this->em->flush();
+                return $run;
+            }
+            if ($games > 0) {
+                $this->fs->dumpFile("$work.note", "[!] $games fichier(s) de tests de jeu (GameTestCase) laissé(s) de côté : ils jouent le jeu et ont besoin de SDL, lancez-les avec bin/jumphp test.");
+            }
             $this->fs->dumpFile("$this->testsDir/jobs/{$run->getId()}.json", json_encode(['id' => $run->getId(), 'project' => $project->getSlug()]));
         } catch (\Throwable $e) {
             $this->fs->remove("$this->testsDir/work/{$run->getId()}");
@@ -77,6 +88,19 @@ final class TestRunner
         }
         $this->runs->prune($project);
         return $run;
+    }
+
+    /** removes the game tests (they extend GameTestCase) of a tests folder: how many there were */
+    private function withoutGameTests(string $dir): int
+    {
+        $removed = 0;
+        foreach (is_dir($dir) ? new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)) : [] as $file) {
+            if ($file->isFile() && str_ends_with($file->getFilename(), '.php') && str_contains((string)file_get_contents($file->getPathname()), 'GameTestCase')) {
+                $this->fs->remove($file->getPathname());
+                $removed++;
+            }
+        }
+        return $removed;
     }
 
     /** What the tester found, if it is done; a run that waits too long fails. */
@@ -90,15 +114,16 @@ final class TestRunner
         if (is_file($result)) {
             $data = json_decode((string)file_get_contents($result), true) ?: [];
             $status = in_array($data['status'] ?? null, [TestRun::PASSED, TestRun::FAILED, TestRun::ERROR], true) ? $data['status'] : TestRun::ERROR;
-            $run->finish($status, (string)($data['output'] ?? ''), (array)($data['summary'] ?? []));
-            $this->fs->remove([$result, "$this->testsDir/work/$id"]);
+            $note = (string)@file_get_contents("$this->testsDir/work/$id.note");
+            $run->finish($status, ($note !== '' ? "$note\n\n" : '') . (string)($data['output'] ?? ''), (array)($data['summary'] ?? []));
+            $this->fs->remove([$result, "$this->testsDir/work/$id", "$this->testsDir/work/$id.note"]);
         } elseif (is_file("$this->testsDir/jobs/$id.running")) {
             $run->setRunning();
         }
         if (!$run->isDone() && time() - $run->getCreatedAt()->getTimestamp() > self::STALE) {
             $run->finish(TestRun::ERROR, $run->getStatus() === TestRun::RUNNING
                 ? 'Les tests ont duré trop longtemps.' : 'Le banc de test n\'a pas répondu : réessayez plus tard.');
-            $this->fs->remove(["$this->testsDir/jobs/$id.json", "$this->testsDir/work/$id"]);
+            $this->fs->remove(["$this->testsDir/jobs/$id.json", "$this->testsDir/work/$id", "$this->testsDir/work/$id.note"]);
         }
         $this->em->flush();
         return $run;
