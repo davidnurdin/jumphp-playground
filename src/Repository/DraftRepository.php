@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Draft;
 use App\Entity\Project;
 use App\Entity\User;
+use App\Service\DraftAuthor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -17,23 +18,37 @@ class DraftRepository extends ServiceEntityRepository
     }
 
     /** @return array<string, Draft> path => draft */
-    public function of(User $user, Project $project): array
+    public function of(User|DraftAuthor $who, Project $project): array
     {
         $drafts = [];
-        foreach ($this->findBy(['user' => $user, 'project' => $project], ['path' => 'ASC']) as $draft) {
+        foreach ($this->findBy(self::who($who)->criteria() + ['project' => $project], ['path' => 'ASC']) as $draft) {
             $drafts[$draft->getPath()] = $draft;
         }
         return $drafts;
     }
 
-    public function forPath(User $user, Project $project, string $path): ?Draft
+    public function forPath(User|DraftAuthor $who, Project $project, string $path): ?Draft
     {
-        return $this->findOneBy(['user' => $user, 'project' => $project, 'path' => $path]);
+        return $this->findOneBy(self::who($who)->criteria() + ['project' => $project, 'path' => $path]);
     }
 
-    public function clear(User $user, Project $project): void
+    public function clear(User|DraftAuthor $who, Project $project): void
     {
-        $this->getEntityManager()->createQuery('DELETE FROM App\Entity\Draft d WHERE d.user = :u AND d.project = :p')
-            ->setParameter('u', $user)->setParameter('p', $project)->execute();
+        foreach ($this->findBy(self::who($who)->criteria() + ['project' => $project]) as $draft) {
+            $this->getEntityManager()->remove($draft);
+        }
+        $this->getEntityManager()->flush();
+    }
+
+    /** The sandbox's visitors forget their drafts after some time without a change. */
+    public function purgeVisitors(\DateTimeImmutable $before): int
+    {
+        return $this->getEntityManager()->createQuery('DELETE FROM App\Entity\Draft d WHERE d.visitor IS NOT NULL AND d.updatedAt < :b')
+            ->setParameter('b', $before)->execute();
+    }
+
+    private static function who(User|DraftAuthor $who): DraftAuthor
+    {
+        return $who instanceof User ? DraftAuthor::user($who) : $who;
     }
 }

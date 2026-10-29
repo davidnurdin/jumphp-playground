@@ -32,6 +32,8 @@
 			<a href="{{ path('home') }}" class="{{ route == 'home' ? 'on' }}">Accueil</a>
 			<a href="{{ path('games') }}" class="{{ route == 'games' ? 'on' }}">Jeux</a>
 			<a href="{{ path('categories') }}" class="{{ route in ['categories', 'category'] ? 'on' }}">Catégories</a>
+			<a href="{{ path('sandbox') }}" class="{{ route starts with 'sandbox' ? 'on' }}">Bac à sable</a>
+			<a href="{{ path('docs') }}" class="{{ route starts with 'docs' ? 'on' }}">Docs</a>
 			<a href="{{ path('studio') }}" class="{{ route starts with 'studio' ? 'on' }}">Créer</a>
 		</nav>
 		<form class="search" action="{{ path('search') }}" method="get" role="search">
@@ -56,7 +58,7 @@
 <footer class="bottom">
 	<div class="wrap">
 		<span>Jeux écrits en PHP avec <a href="https://github.com/davidnurdin/jumPhp">JumPHP</a> : le même code sur le bureau et dans le navigateur (WebAssembly).</span>
-		<span><a href="{{ path('categories') }}">Annuaire</a> · <a href="{{ path('studio') }}">Créer un jeu</a> · <a href="https://github.com/davidnurdin/jumphp-playground">Code du site</a></span>
+		<span><a href="{{ path('categories') }}">Annuaire</a> · <a href="{{ path('docs') }}">Documentation</a> · <a href="{{ path('sandbox') }}">Bac à sable</a> · <a href="{{ path('studio') }}">Créer un jeu</a> · <a href="https://github.com/davidnurdin/jumphp-playground">Code du site</a></span>
 	</div>
 </footer>
 {% endblock %}

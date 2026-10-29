@@ -243,4 +243,55 @@ final class PlaygroundTest extends WebTestCase
         $this->get(self::PLAY, '/test-game/play/manifest.json');
         self::assertCount(2, json_decode((string)$this->client->getResponse()->getContent(), true)['files']);
     }
+
+    public function testSandboxWithoutAccount(): void
+    {
+        $this->get(self::APP, '/bac-a-sable');
+        self::assertResponseRedirects('/bac-a-sable/hello-world');
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/bac-a-sable/test-game');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#btn-push');
+        $api = $crawler->filter('#editor')->attr('data-api');
+        $token = $crawler->filter('#editor')->attr('data-csrf');
+        $call = function (string $method, string $path, ?array $body = null, ?string $csrf = null) use ($api, $token): array {
+            $this->client->request($method, 'http://' . self::APP . $api . $path, [], [], [
+                'HTTP_X_CSRF_TOKEN' => $csrf ?? $token, 'CONTENT_TYPE' => 'application/json',
+            ], $body ? json_encode($body) : null);
+            return json_decode((string)$this->client->getResponse()->getContent(), true) ?? [];
+        };
+        self::assertSame('added', $call('PUT', '/file', ['path' => 'src/Mine.php', 'content' => "<?php\n// mine\n"])['state']);
+        $call('GET', '/tree', null, 'forged');
+        self::assertResponseStatusCodeSame(403);
+
+        // played with the visitor's files, served as bytes only
+        parse_str((string)parse_url($call('GET', '/preview')['url'], PHP_URL_QUERY), $query);
+        $this->get(self::PLAY, '/test-game/play/manifest.json?draft=' . rawurlencode($query['draft']));
+        $files = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], null, 'path');
+        $this->get(self::PLAY, '/test-game/play/' . $files['src/Mine.php']['url']);
+        self::assertResponseHeaderSame('Content-Type', 'application/octet-stream');
+        self::assertStringContainsString('sandbox', (string)$this->client->getResponse()->headers->get('Content-Security-Policy'));
+
+        // another browser has its own sandbox; a visitor cannot push
+        $this->client->getCookieJar()->clear();
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/bac-a-sable/test-game');
+        $other = $crawler->filter('#editor')->attr('data-csrf');
+        self::assertNotSame($token, $other);
+        $states = array_column($call('GET', '/tree', null, $other)['files'], 'state', 'path');
+        self::assertArrayNotHasKey('src/Mine.php', $states);
+        $this->client->request('POST', 'http://' . self::APP . str_replace('/tree', '/push', $api), [], [], ['HTTP_X_CSRF_TOKEN' => $other]);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testDocs(): void
+    {
+        foreach (\App\Controller\DocsController::PAGES as $pages) {
+            foreach (array_keys($pages) as $page) {
+                $this->get(self::APP, $page === 'index' ? '/docs' : "/docs/$page");
+                self::assertResponseIsSuccessful($page);
+                self::assertSelectorExists('article.doc h1');
+            }
+        }
+        $this->get(self::APP, '/docs/nope');
+        self::assertResponseStatusCodeSame(404);
+    }
 }

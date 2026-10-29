@@ -11,7 +11,7 @@ final class Slugs
     private const RESERVED = [
         'api', 'assets', 'admin', 'categorie', 'categories', 'connect', 'engine', 'favicon', 'jeux', 'jouer',
         'login', 'logout', 'mcp', 'media', 'play', 'robots', 'search', 'recherche', 'sitemap', 'source', 'studio',
-        'webhook', 'www', 'help', 'aide', 'about', 'docs', 'static', 'new', 'edit', 'games', 'jumphp', 'skeleton',
+        'webhook', 'www', 'bac-a-sable', 'sandbox', 'tutoriels', 'tutorials', 'note', 'help', 'aide', 'about', 'docs', 'static', 'new', 'edit', 'games', 'jumphp', 'skeleton',
     ];
 
     public function __construct(private ProjectRepository $projects)

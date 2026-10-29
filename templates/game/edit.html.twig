@@ -1,13 +1,27 @@
 {% extends 'base.html.twig' %}
-{% block title %}Éditer {{ project.title }} – JumPHP playground{% endblock %}
+{% set sandbox = sandbox ?? false %}
+{% block title %}{{ sandbox ? 'Bac à sable : ' : 'Éditer ' }}{{ project.title }} – JumPHP playground{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 {% block javascripts %}{{ importmap(['app', 'editor']) }}{% endblock %}
 {% block body_class %}full{% endblock %}
 {% block body %}
+{% if sandbox %}
+<div class="gamebar sandbox-bar">
+	<div class="wrap">
+		<h1>Bac à sable</h1>
+		<span class="by">Changez le code de <b>{{ project.title }}</b>, cliquez sur « ▶ Tester » : le jeu tourne dans votre navigateur. Sans compte ; vos fichiers restent {{ constant('App\\Service\\Sandbox::PURGE_DAYS') }} jours dans ce navigateur.</span>
+		<div class="actions">
+			<a class="btn small" href="{{ path('docs_page', {page: 'hello-world'}) }}">Le tutoriel</a>
+			<a class="btn small primary" href="{{ path('studio_new') }}">Créer mon jeu</a>
+		</div>
+	</div>
+</div>
+{% else %}
 {% include 'game/_bar.html.twig' with {mode: 'edit'} %}
+{% endif %}
 <div class="editor" id="editor"
-	data-api="{{ path('api_tree', {slug: project.slug})|replace({'/tree': ''}) }}"
-	data-csrf="{{ csrf_token('editor') }}"
+	data-api="{{ sandbox ? api|replace({'/tree': ''}) : path('api_tree', {slug: project.slug})|replace({'/tree': ''}) }}"
+	data-csrf="{{ sandbox ? token : csrf_token('editor') }}"
 	data-can-push="{{ can_push ? '1' : '0' }}">
 	<aside class="ed-tree" id="tree" aria-label="Fichiers"><p class="faint" style="padding: 0 10px">Chargement…</p></aside>
 	<section class="ed-main">
@@ -18,7 +32,9 @@
 			<button class="btn small" type="button" id="btn-revert" disabled>Annuler mes modifs</button>
 			<button class="btn small" type="button" id="btn-delete" disabled>Supprimer</button>
 			<button class="btn small" type="button" id="btn-preview">▶ Tester</button>
-			{% if can_push %}
+			{% if sandbox %}
+				<button class="btn small" type="button" id="btn-reset">Tout recommencer</button>
+			{% elseif can_push %}
 				<button class="btn small primary" type="button" id="btn-push">Envoyer sur GitHub</button>
 			{% else %}
 				<button class="btn small primary" type="button" id="btn-fork">Forker pour garder</button>
@@ -27,7 +43,11 @@
 		<div class="ed-code" id="code"><div class="ed-empty">
 			<div>
 				<p>Vos modifications sont gardées pour vous seul (<span id="drafts">{{ drafts }}</span> fichier{{ drafts > 1 ? 's' }} modifié{{ drafts > 1 ? 's' }}).</p>
-				<p class="muted">« Tester » lance le jeu avec elles. {{ can_push ? '« Envoyer sur GitHub » en fait un commit : le jeu est republié.' : 'Ce jeu n\'est pas à vous : forkez-le pour les envoyer dans votre propre dépôt.' }}</p>
+				{% if sandbox %}
+					<p class="muted">Ouvrez <b>src/Scene/HelloScene.php</b> (à gauche), changez le texte « HELLO WORLD! » ou la couleur, puis « ▶ Tester ». Le menu est dans <b>TitleScene.php</b>, les touches dans <b>config/input.yaml</b>.</p>
+				{% else %}
+					<p class="muted">« Tester » lance le jeu avec elles. {{ can_push ? '« Envoyer sur GitHub » en fait un commit : le jeu est republié.' : 'Ce jeu n\'est pas à vous : forkez-le pour les envoyer dans votre propre dépôt.' }}</p>
+				{% endif %}
 			</div>
 		</div></div>
 	</section>
@@ -52,6 +72,7 @@
 		<div class="actions"><button class="btn primary" value="ok">Envoyer</button><button class="btn" value="cancel" formnovalidate>Annuler</button></div>
 	</form>
 </dialog>
+{% if not sandbox %}
 <dialog id="dlg-fork">
 	<form method="post" action="{{ path('game_fork', {slug: project.slug}) }}">
 		<h2>Forker {{ project.title }}</h2>
@@ -61,4 +82,5 @@
 		<div class="actions"><button class="btn primary" type="submit">Forker</button><button class="btn" type="button" onclick="this.closest('dialog').close()">Annuler</button></div>
 	</form>
 </dialog>
+{% endif %}
 {% endblock %}

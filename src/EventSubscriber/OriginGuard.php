@@ -50,7 +50,8 @@ final class OriginGuard implements EventSubscriberInterface
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         if ($this->isPlay($event->getRequest()->getHost())) {
             // the portal shows these pages in a frame; search engines index the portal's page, not these
-            $headers->set('Content-Security-Policy', "frame-ancestors 'self' " . rtrim($this->appUrl, '/'));
+            $csp = $headers->get('Content-Security-Policy');
+            $headers->set('Content-Security-Policy', ($csp ? "$csp; " : '') . "frame-ancestors 'self' " . rtrim($this->appUrl, '/'));
             $headers->set('X-Robots-Tag', 'noindex');
             $headers->remove('Set-Cookie');
             return;

@@ -2,15 +2,16 @@
 
 namespace App\Controller;
 
-use App\Entity\Draft;
 use App\Entity\Project;
 use App\Entity\User;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
+use App\Service\DraftAuthor;
 use App\Service\DraftToken;
 use App\Service\GameFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
+use App\Service\Sandbox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,11 +22,13 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * The online editor's API: a game's files with the user's drafts on top (their session of the game), saved
+ * The online editor's API: a game's files with the author's drafts on top (their session of the game), saved
  * as they type, played in the preview (the games origin, with a draft token), pushed to GitHub as one commit
- * or forked. Every call carries the CSRF token of the page (X-CSRF-Token).
+ * or forked. Two kinds of authors, the same calls:
+ *   /api/projects/<slug>/...      a signed-in user (the CSRF token of the page in X-CSRF-Token)
+ *   /api/bac-a-sable/<slug>/...   a visitor of the sandbox, no account (Sandbox: their cookie; no push)
  */
-#[Route('/api/projects/{slug}', requirements: ['slug' => '[a-z][a-z0-9-]+'])]
+#[Route('/api', condition: "request.getHost() != env('PLAY_HOST')")]
 final class EditorApiController extends AbstractController
 {
     public function __construct(
@@ -33,19 +36,21 @@ final class EditorApiController extends AbstractController
         private DraftRepository $drafts,
         private GameFiles $files,
         private EntityManagerInterface $em,
+        private Sandbox $sandbox,
         private string $playUrl,
     ) {
     }
 
-    #[Route('/tree', name: 'api_tree', methods: ['GET'])]
-    public function tree(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    #[Route('/projects/{slug}/tree', name: 'api_tree', methods: ['GET'])]
+    #[Route('/bac-a-sable/{slug}/tree', name: 'sandbox_tree', methods: ['GET'])]
+    public function tree(string $slug, Request $request, #[CurrentUser] ?User $user): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project, $who] = $this->open($slug, $request, $user);
         $files = [];
         foreach ($this->files->tree($project) as $path => $size) {
             $files[$path] = ['path' => $path, 'size' => $size, 'state' => 'published'];
         }
-        foreach ($this->drafts->of($user, $project) as $path => $draft) {
+        foreach ($this->drafts->of($who, $project) as $path => $draft) {
             $files[$path] = ['path' => $path, 'size' => strlen((string)$draft->getContent()),
                 'state' => $draft->isDeleted() ? 'deleted' : (isset($files[$path]) ? 'modified' : 'added')];
         }
@@ -53,12 +58,13 @@ final class EditorApiController extends AbstractController
         return new JsonResponse(['files' => array_values($files), 'commit' => $project->getPublishedSha()]);
     }
 
-    #[Route('/file', name: 'api_file_get', methods: ['GET'])]
-    public function get(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    #[Route('/projects/{slug}/file', name: 'api_file_get', methods: ['GET'])]
+    #[Route('/bac-a-sable/{slug}/file', name: 'sandbox_file_get', methods: ['GET'])]
+    public function get(string $slug, Request $request, #[CurrentUser] ?User $user): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project, $who] = $this->open($slug, $request, $user);
         $path = $this->path($request->query->get('path'));
-        $draft = $this->drafts->forPath($user, $project, $path);
+        $draft = $this->drafts->forPath($who, $project, $path);
         if ($draft && !$draft->isDeleted()) {
             return new JsonResponse(['path' => $path, 'content' => $draft->getContent(), 'draft' => true, 'text' => true]);
         }
@@ -70,17 +76,23 @@ final class EditorApiController extends AbstractController
         return new JsonResponse(['path' => $path, 'content' => $content, 'draft' => false, 'text' => true]);
     }
 
-    #[Route('/file', name: 'api_file_put', methods: ['PUT'])]
-    public function put(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    #[Route('/projects/{slug}/file', name: 'api_file_put', methods: ['PUT'])]
+    #[Route('/bac-a-sable/{slug}/file', name: 'sandbox_file_put', methods: ['PUT'])]
+    public function put(string $slug, Request $request, #[CurrentUser] ?User $user): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project, $who] = $this->open($slug, $request, $user);
         $data = $request->toArray();
         $path = $this->path($data['path'] ?? null);
         $content = (string)($data['content'] ?? '');
-        if (strlen($content) > GameFiles::MAX_EDIT || !GameFiles::isText($path)) {
-            return new JsonResponse(['error' => 'Fichier texte de 512 Ko au plus.'], 400);
+        $max = $who->isVisitor() ? Sandbox::MAX_FILE : GameFiles::MAX_EDIT;
+        if (strlen($content) > $max || !GameFiles::isText($path)) {
+            return new JsonResponse(['error' => sprintf('Fichier texte de %d Ko au plus.', $max / 1024)], 400);
         }
-        $draft = $this->drafts->forPath($user, $project, $path) ?? new Draft($user, $project, $path);
+        $draft = $this->drafts->forPath($who, $project, $path);
+        if (!$draft && $who->isVisitor() && count($this->drafts->of($who, $project)) >= Sandbox::MAX_FILES) {
+            return new JsonResponse(['error' => sprintf('Le bac à sable garde %d fichiers modifiés au plus.', Sandbox::MAX_FILES)], 400);
+        }
+        $draft ??= $who->newDraft($project, $path);
         $published = $this->files->path($project, $path);
         if ($published && file_get_contents($published) === $content) {
             // back to the published version: no draft any more
@@ -96,19 +108,20 @@ final class EditorApiController extends AbstractController
         return new JsonResponse(['saved' => true, 'state' => $published ? 'modified' : 'added']);
     }
 
-    #[Route('/file', name: 'api_file_delete', methods: ['DELETE'])]
-    public function delete(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    #[Route('/projects/{slug}/file', name: 'api_file_delete', methods: ['DELETE'])]
+    #[Route('/bac-a-sable/{slug}/file', name: 'sandbox_file_delete', methods: ['DELETE'])]
+    public function delete(string $slug, Request $request, #[CurrentUser] ?User $user): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project, $who] = $this->open($slug, $request, $user);
         $path = $this->path($request->query->get('path'));
-        $draft = $this->drafts->forPath($user, $project, $path);
+        $draft = $this->drafts->forPath($who, $project, $path);
         if (!$this->files->path($project, $path)) {
             // a file only in the drafts: gone
             if ($draft) {
                 $this->em->remove($draft);
             }
         } else {
-            $draft ??= new Draft($user, $project, $path);
+            $draft ??= $who->newDraft($project, $path);
             $draft->markDeleted();
             $this->em->persist($draft);
         }
@@ -116,32 +129,34 @@ final class EditorApiController extends AbstractController
         return new JsonResponse(['deleted' => true]);
     }
 
-    #[Route('/discard', name: 'api_discard', methods: ['POST'])]
-    public function discard(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    #[Route('/projects/{slug}/discard', name: 'api_discard', methods: ['POST'])]
+    #[Route('/bac-a-sable/{slug}/discard', name: 'sandbox_discard', methods: ['POST'])]
+    public function discard(string $slug, Request $request, #[CurrentUser] ?User $user): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project, $who] = $this->open($slug, $request, $user);
         $path = $request->toArray()['path'] ?? null;
         if ($path === null) {
-            $this->drafts->clear($user, $project);
-        } elseif ($draft = $this->drafts->forPath($user, $project, $this->path($path))) {
+            $this->drafts->clear($who, $project);
+        } elseif ($draft = $this->drafts->forPath($who, $project, $this->path($path))) {
             $this->em->remove($draft);
             $this->em->flush();
         }
         return new JsonResponse(['discarded' => true]);
     }
 
-    #[Route('/preview', name: 'api_preview', methods: ['GET'])]
-    public function preview(string $slug, Request $request, #[CurrentUser] User $user, DraftToken $tokens): JsonResponse
+    #[Route('/projects/{slug}/preview', name: 'api_preview', methods: ['GET'])]
+    #[Route('/bac-a-sable/{slug}/preview', name: 'sandbox_preview', methods: ['GET'])]
+    public function preview(string $slug, Request $request, #[CurrentUser] ?User $user, DraftToken $tokens): JsonResponse
     {
-        $project = $this->project($slug, $request);
-        $token = $tokens->make($project->getId(), $user->getId());
+        [$project, $who] = $this->open($slug, $request, $user);
+        $token = $tokens->make($project->getId(), $who);
         return new JsonResponse(['url' => rtrim($this->playUrl, '/') . "/$slug/play/?draft=" . rawurlencode($token) . '&t=' . time()]);
     }
 
-    #[Route('/push', name: 'api_push', methods: ['POST'])]
+    #[Route('/projects/{slug}/push', name: 'api_push', methods: ['POST'])]
     public function push(string $slug, Request $request, #[CurrentUser] User $user, Projects $service): JsonResponse
     {
-        $project = $this->project($slug, $request);
+        [$project] = $this->open($slug, $request, $user);
         try {
             $sha = $service->push($user, $project, (string)($request->toArray()['message'] ?? ''));
         } catch (ProjectException $e) {
@@ -150,16 +165,27 @@ final class EditorApiController extends AbstractController
         return new JsonResponse(['commit' => $sha, 'url' => $project->getRepoUrl() . '/commit/' . $sha]);
     }
 
-    private function project(string $slug, Request $request): Project
+    /** @return array{0: Project, 1: DraftAuthor} the game and whose drafts, after the checks of their kind */
+    private function open(string $slug, Request $request, ?User $user): array
     {
-        if (!$this->isCsrfTokenValid('editor', (string)$request->headers->get('X-CSRF-Token'))) {
-            throw new AccessDeniedHttpException('CSRF');
+        $token = (string)$request->headers->get('X-CSRF-Token');
+        if (str_starts_with((string)$request->attributes->get('_route'), 'sandbox_')) {
+            $visitor = $this->sandbox->visitor($request);
+            if (!$visitor || !hash_equals($this->sandbox->token($visitor), $token)) {
+                throw new AccessDeniedHttpException('CSRF');
+            }
+            $who = DraftAuthor::visitor($visitor);
+        } else {
+            if (!$user || !$this->isCsrfTokenValid('editor', $token)) {
+                throw new AccessDeniedHttpException('CSRF');
+            }
+            $who = DraftAuthor::user($user);
         }
         $project = $this->projects->findOneBy(['slug' => $slug]);
         if (!$project || !$project->isPublished()) {
             throw new NotFoundHttpException();
         }
-        return $project;
+        return [$project, $who];
     }
 
     private function path(mixed $path): string

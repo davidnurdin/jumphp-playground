@@ -6,6 +6,7 @@ use App\Entity\Project;
 use App\Repository\DraftRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
+use App\Service\DraftAuthor;
 use App\Service\DraftToken;
 use App\Service\GameFiles;
 use App\Service\PrivateFiles;
@@ -90,10 +91,9 @@ final class PlayController extends AbstractController
     {
         $project = $this->published($slug);
         $token = (string)$request->query->get('draft');
-        $claim = $token !== '' ? $this->tokens->read($token, $project->getId()) : null;
-        $user = $claim ? $this->users->find($claim['user']) : null;
-        $manifest = $user
-            ? $this->files->manifestWithDrafts($project, $this->drafts->of($user, $project), $token)
+        $author = $this->author($token !== '' ? $this->tokens->read($token, $project->getId()) : null);
+        $manifest = $author
+            ? $this->files->manifestWithDrafts($project, $this->drafts->of($author, $project), $token)
             : $this->files->manifest($project);
         if (!$manifest) {
             throw new NotFoundHttpException();
@@ -125,14 +125,15 @@ final class PlayController extends AbstractController
     public function draft(string $slug, string $token, string $path): Response
     {
         $project = $this->published($slug);
-        $claim = $this->tokens->read($token, $project->getId());
-        $user = $claim ? $this->users->find($claim['user']) : null;
-        $draft = $user ? $this->drafts->forPath($user, $project, (string)GameFiles::clean($path)) : null;
+        $author = $this->author($this->tokens->read($token, $project->getId()));
+        $draft = $author ? $this->drafts->forPath($author, $project, (string)GameFiles::clean($path)) : null;
         if (!$draft || $draft->isDeleted()) {
             throw new NotFoundHttpException();
         }
+        // anyone's text (the sandbox): bytes for the game, never a page of this origin
         return new Response((string)$draft->getContent(), 200, [
-            'Content-Type' => GameFiles::mime($path),
+            'Content-Type' => 'application/octet-stream',
+            'Content-Security-Policy' => "sandbox; default-src 'none'",
             'Cache-Control' => 'private, max-age=31536000, immutable',
         ]);
     }
@@ -182,6 +183,19 @@ final class PlayController extends AbstractController
             return new Response($text, 200, ['Content-Type' => GameFiles::mime($file), 'Cache-Control' => 'no-cache']);
         }
         return $this->send($file, false);
+    }
+
+    /** @param array{project: int, author: string}|null $claim a preview token's */
+    private function author(?array $claim): ?DraftAuthor
+    {
+        if (!$claim) {
+            return null;
+        }
+        if ($claim['author'][0] === 'v') {
+            return DraftAuthor::visitor(substr($claim['author'], 1));
+        }
+        $user = $this->users->find((int)substr($claim['author'], 1));
+        return $user ? DraftAuthor::user($user) : null;
     }
 
     /** {{DOMAIN}} of a game's site on the playground: the game's page on the portal */

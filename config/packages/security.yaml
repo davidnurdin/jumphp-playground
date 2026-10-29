@@ -41,4 +41,4 @@ security:
     access_control:
         - { path: ^/mcp, roles: ROLE_USER }
         - { path: ^/studio, roles: ROLE_USER }
-        - { path: ^/api/, roles: ROLE_USER }
+        - { path: ^/api/projects/, roles: ROLE_USER }

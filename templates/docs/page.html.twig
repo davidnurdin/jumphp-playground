@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ title }} – documentation JumPHP{% endblock %}
+{% block description %}{{ description ?: 'Créer des jeux rétro en PHP avec JumPHP : toutes les façons, et des tutoriels pas à pas.' }}{% endblock %}
+{% block body %}
+<section class="section docs">
+	<div class="wrap docs-layout">
+		<nav class="docs-nav" aria-label="Documentation">
+			{% for group, entries in pages %}
+				<h2>{{ group }}</h2>
+				<ul>
+					{% for slug, label in entries %}<li><a href="{{ slug == 'index' ? path('docs') : path('docs_page', {page: slug}) }}" class="{{ slug == page ? 'on' }}"{{ slug == page ? ' aria-current="page"' }}>{{ label }}</a></li>{% endfor %}
+				</ul>
+			{% endfor %}
+			<p><a class="btn small primary" href="{{ path('sandbox') }}">Essayer sans compte</a></p>
+		</nav>
+		<article class="doc">
+			{{ html|raw }}
+			<nav class="doc-pager" aria-label="Pages">
+				{% if previous %}<a href="{{ previous.page == 'index' ? path('docs') : path('docs_page', {page: previous.page}) }}">← {{ previous.title }}</a>{% else %}<span></span>{% endif %}
+				{% if next %}<a href="{{ path('docs_page', {page: next.page}) }}">{{ next.title }} →</a>{% endif %}
+			</nav>
+		</article>
+	</div>
+</section>
+{% endblock %}

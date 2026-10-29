@@ -88,7 +88,8 @@ if (root) {
 		files = (await api('GET', '/tree')).files;
 		tree.replaceChildren();
 		render(build(files), tree);
-		$('drafts').textContent = files.filter((f) => f.state !== 'published').length;
+		const count = $('drafts');    // in the welcome text, gone once a file is open
+		if (count) count.textContent = files.filter((f) => f.state !== 'published').length;
 	}
 	tree.addEventListener('click', (event) => {
 		const link = event.target.closest('a[data-path]');
@@ -219,6 +220,16 @@ if (root) {
 		}, { once: true });
 	});
 	$('btn-fork')?.addEventListener('click', async () => { await flush(); $('dlg-fork').showModal(); });
+	$('btn-reset')?.addEventListener('click', async () => {
+		if (!window.confirm('Effacer toutes vos modifications et repartir du jeu d\'origine ?')) return;
+		clearTimeout(saveTimer); saveTimer = null;
+		await api('POST', '/discard', {});
+		current = null;
+		code.replaceChildren();
+		$('path').textContent = '';
+		await loadTree();
+		say('Tout est revenu à l\'origine.');
+	});
 
 	loadTree().then(() => { if (location.hash.length > 1) open(decodeURIComponent(location.hash.slice(1))); })
 		.catch((e) => { tree.textContent = e.message; });

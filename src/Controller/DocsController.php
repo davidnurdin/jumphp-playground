@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Controller;
+
+use League\CommonMark\GithubFlavoredMarkdownConverter;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Attribute\Route;
+
+/** The documentation: every way to make a game, the tutorials (content/docs/<page>.md, GitHub Markdown). */
+#[Route(condition: "request.getHost() != env('PLAY_HOST')")]
+final class DocsController extends AbstractController
+{
+    /** the pages, in the order of the menu: group => [page => title] */
+    public const PAGES = [
+        'Créer un jeu' => [
+            'index' => 'Toutes les façons',
+            'bac-a-sable' => 'Le bac à sable (sans compte)',
+            'avec-claude' => 'Avec votre Claude',
+            'editeur-en-ligne' => 'L\'éditeur en ligne',
+            'en-local' => 'Sur votre ordinateur',
+            'importer' => 'Importer un dépôt',
+            'remake-amstrad' => 'Remake Amstrad CPC',
+            'portage' => 'Porter un jeu existant',
+        ],
+        'Tutoriels' => [
+            'hello-world' => '1. Hello world',
+            'personnage' => '2. Un personnage',
+            'plates-formes' => '3. Plates-formes',
+            'sons' => '4. Sons et musique',
+            'menus' => '5. Menus et pause',
+            'sauvegarde' => '6. Sauvegarde',
+            'multijoueur' => '7. Multijoueur',
+            'page-du-jeu' => '8. Page du jeu',
+        ],
+        'Pour les programmes' => [
+            'api' => 'L\'API publique',
+        ],
+    ];
+
+    #[Route('/docs', name: 'docs', methods: ['GET'])]
+    #[Route('/docs/{page}', name: 'docs_page', requirements: ['page' => '[a-z0-9-]+'], methods: ['GET'])]
+    public function page(string $page = 'index'): Response
+    {
+        $order = array_merge(...array_values(array_map(fn (array $group) => array_keys($group), self::PAGES)));
+        $file = $this->getParameter('kernel.project_dir') . "/content/docs/$page.md";
+        $at = array_search($page, $order, true);
+        if ($at === false || !is_file($file)) {
+            throw new NotFoundHttpException();
+        }
+        $markdown = (string)file_get_contents($file);
+        $html = (string)(new GithubFlavoredMarkdownConverter(['html_input' => 'allow', 'allow_unsafe_links' => false]))->convert($markdown);
+        preg_match('/^# (.+)$/m', $markdown, $title);
+        preg_match('/^(?!#)(?!\|)(?!```)(\S.+)$/m', $markdown, $first);
+        $titles = array_merge(...array_values(self::PAGES));
+        return $this->render('docs/page.html.twig', [
+            'page' => $page,
+            'title' => $title[1] ?? $titles[$page],
+            'description' => mb_substr(strip_tags((string)preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', $first[1] ?? '')), 0, 200),
+            'html' => $html,
+            'pages' => self::PAGES,
+            'previous' => $at > 0 ? ['page' => $order[$at - 1], 'title' => $titles[$order[$at - 1]]] : null,
+            'next' => $at < count($order) - 1 ? ['page' => $order[$at + 1], 'title' => $titles[$order[$at + 1]]] : null,
+        ]);
+    }
+}
