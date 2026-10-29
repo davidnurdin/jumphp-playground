@@ -11,6 +11,11 @@ navigateur.
   aperçu du jeu avec les brouillons, push sur GitHub en un commit, ou fork.
 - **Connexion GitHub uniquement**. Un projet = un dépôt GitHub public de l'utilisateur (un projet JumPHP avec un
   jeu), publié à chaque push (webhook) ; catégorie choisie à la création.
+- **Bac à sable** (`/bac-a-sable`) : l'éditeur sans compte, sur hello-world ou n'importe quel jeu (brouillons
+  liés à un cookie signé, gardés 30 jours, pas de push).
+- **Documentation et tutoriels** (`/docs`, `content/docs/*.md`).
+- **API publique** en lecture seule (API Platform, `/api/games`, `/api/categories`, OpenAPI sur `/api/docs`,
+  CORS ouvert) : `src/ApiResource`, `src/State`.
 - **Serveur MCP** (`/mcp`, jeton fait dans `/studio/mcp`) : le Claude local de l'utilisateur crée le projet,
   clone le dépôt, fait le jeu et son site, pousse et publie (`AGENTS.md` §14 de JumPHP).
 

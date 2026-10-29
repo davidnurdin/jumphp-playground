@@ -282,6 +282,53 @@ final class PlaygroundTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testPublicApi(): void
+    {
+        $json = function (string $path, string $accept = 'application/json'): mixed {
+            $this->client->request('GET', 'http://' . self::APP . $path, [], [], ['HTTP_ACCEPT' => $accept, 'HTTP_ORIGIN' => 'https://elsewhere.example']);
+            return json_decode((string)$this->client->getResponse()->getContent(), true);
+        };
+        $hidden = new Project($this->user, 'hidden-game', 'Hidden', $this->project->getCategory(), 'tester/hidden', 'games/hidden');
+        $hidden->publish(self::SHA, '0.2.0', [], null, false);
+        $hidden->setListed(false);
+        $this->em->persist($hidden);
+        $this->em->flush();
+
+        $games = $json('/api/games?order[title]=asc');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Access-Control-Allow-Origin', 'https://elsewhere.example');
+        self::assertSame(['test-game'], array_column($games, 'slug'));
+        self::assertSame(['category' => 'arcade', 'kind' => 'original', 'author' => 'tester', 'rating' => null, 'ratings' => 0],
+            array_intersect_key($games[0], array_flip(['category', 'kind', 'author', 'rating', 'ratings'])));
+        self::assertSame('http://jumphp.test/test-game/jouer', $games[0]['play']);
+        self::assertStringEndsWith('/test-game/play/manifest.json', $games[0]['manifest']);
+        self::assertSame([], $json('/api/games?kind=cpc'));
+        self::assertSame([], $json('/api/games?category=tir'));
+        $json('/api/games?kind=nope');
+        self::assertResponseStatusCodeSame(422);
+
+        $page = $json('/api/games', 'application/ld+json');
+        self::assertSame(1, $page['totalItems']);
+        self::assertSame('/api/games/test-game', $page['member'][0]['@id']);
+        self::assertSame('test-game', $json('/api/games/test-game')['slug']);
+        $json('/api/games/hidden-game');
+        self::assertResponseStatusCodeSame(404);
+
+        $arcade = $json('/api/categories/arcade');
+        self::assertSame(1, $arcade['games']);
+        self::assertContains('arcade', array_column($json('/api/categories'), 'slug'));
+        $this->client->request('GET', 'http://' . self::APP . '/api/docs.jsonopenapi');
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('/api/games', json_decode((string)$this->client->getResponse()->getContent(), true)['paths']);
+
+        // the public API answers on the portal only, and the editor's API stays private
+        $this->client->request('GET', 'http://' . self::PLAY . '/api/games');
+        self::assertResponseStatusCodeSame(404);
+        $json('/api/bac-a-sable/test-game/tree');
+        self::assertResponseStatusCodeSame(403);
+        self::assertResponseNotHasHeader('Access-Control-Allow-Origin');
+    }
+
     public function testDocs(): void
     {
         foreach (\App\Controller\DocsController::PAGES as $pages) {

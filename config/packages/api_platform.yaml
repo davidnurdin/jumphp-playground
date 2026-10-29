@@ -1,0 +1,30 @@
+# The public API: the directory of games, read only (src/ApiResource, src/State). Documentation: /api/docs.
+api_platform:
+    title: JumPHP playground
+    description: "L'annuaire des jeux JumPHP en lecture seule : les jeux publiés et leurs catégories."
+    version: 1.0.0
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    docs_formats:
+        jsonld: ['application/ld+json']
+        jsonopenapi: ['application/vnd.openapi+json']
+        html: ['text/html']
+    mapping:
+        paths: ['%kernel.project_dir%/src/ApiResource']
+    doctrine:
+        enabled: false      # our own providers read the entities
+    mcp:
+        enabled: false      # the creators' MCP server is /mcp (McpController)
+    enable_re_doc: false
+    defaults:
+        stateless: true
+        pagination_items_per_page: 30
+        pagination_maximum_items_per_page: 100
+        pagination_client_items_per_page: true
+        normalization_context:
+            skip_null_values: false     # rating, image... are null rather than missing
+        cache_headers:
+            max_age: 60
+            shared_max_age: 60
+            vary: ['Accept', 'Origin']

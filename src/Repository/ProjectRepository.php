@@ -54,6 +54,36 @@ class ProjectRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /** The fields the public API sorts the games by (GameProvider). */
+    public const API_ORDERS = ['rating', 'plays', 'publishedAt', 'title'];
+
+    /**
+     * One page of the games of the public API, filtered, sorted (fields of API_ORDERS => ASC|DESC, in the order
+     * given; by mark as in sorted()).
+     *
+     * @param array<string, string> $order
+     * @return array{Project[], int} the page, and how many games match in all
+     */
+    public function forApi(?string $category, ?string $kind, array $order, int $offset, int $limit): array
+    {
+        $qb = $this->listed();
+        if ($category !== null) {
+            $qb->andWhere('c.slug = :category')->setParameter('category', $category);
+        }
+        if ($kind !== null) {
+            $qb->andWhere('p.kind = :kind')->setParameter('kind', $kind);
+        }
+        $total = (int)(clone $qb)->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
+        foreach ($order as $field => $direction) {
+            match ($field) {
+                'rating' => $qb->addSelect('(p.ratingSum + 9) / (p.ratingCount + 3) AS HIDDEN score')->addOrderBy('score', $direction),
+                default => $qb->addOrderBy('p.' . $field, $direction),
+            };
+        }
+        $qb->addOrderBy('p.publishedAt', 'DESC')->addOrderBy('p.id', 'DESC');
+        return [$qb->setFirstResult($offset)->setMaxResults($limit)->getQuery()->getResult(), $total];
+    }
+
     public function countListed(?Category $category = null): int
     {
         $qb = $this->listed()->select('COUNT(p.id)');

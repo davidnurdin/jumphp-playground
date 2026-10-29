@@ -1,0 +1,12 @@
+# Any site may read the public API; the editor's API (/api/projects/, /api/bac-a-sable/) stays same-origin.
+nelmio_cors:
+    defaults:
+        allow_origin: []
+    paths:
+        '^/api/(projects|bac-a-sable)/': ~
+        '^/api(?![\w-])':
+            allow_origin: ['*']
+            allow_methods: ['GET', 'OPTIONS']
+            allow_headers: ['Accept', 'Content-Type']
+            expose_headers: ['Link']
+            max_age: 86400

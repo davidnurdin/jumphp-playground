@@ -23,6 +23,10 @@ security:
         webhook:
             pattern: ^/webhook/
             security: false
+        # the public API (API Platform, read only): no user, no session; not the editor's /api/projects/, /api/bac-a-sable/
+        api:
+            pattern: ^/api(?![\w-])(?!/(projects|bac-a-sable)/)
+            security: false
         main:
             lazy: true
             provider: users
