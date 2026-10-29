@@ -8,6 +8,7 @@ use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\DraftToken;
 use App\Service\GameFiles;
+use App\Service\PrivateFiles;
 use App\Service\Runtimes;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -24,6 +25,7 @@ use Symfony\Component\Routing\Attribute\Route;
  *   /<slug>/play/           the game: JumPHP's page with the shared engine /engine/<version>/ (remote mode)
  *   /<slug>/play/manifest.json, /<slug>/play/files/<path>   its files, one by one
  *   /<slug>/play/draft/<token>/<path>                      a user's draft (the online editor)
+ *   /<slug>/play/private/<path>                            a file given by the owner, in no repository (PrivateFiles)
  *   /<slug>/raw/<path>      any published file of the game, as text (the source browser)
  */
 #[Route(condition: "request.getHost() == env('PLAY_HOST')")]
@@ -38,6 +40,7 @@ final class PlayController extends AbstractController
         private DraftToken $tokens,
         private DraftRepository $drafts,
         private UserRepository $users,
+        private PrivateFiles $private,
         private string $appUrl,
     ) {
     }
@@ -132,6 +135,13 @@ final class PlayController extends AbstractController
             'Content-Type' => GameFiles::mime($path),
             'Cache-Control' => 'private, max-age=31536000, immutable',
         ]);
+    }
+
+    #[Route('/{slug}/play/private/{path}', name: 'play_private', requirements: ['slug' => '[a-z][a-z0-9-]+', 'path' => '.+'], methods: ['GET'], priority: 10)]
+    public function privateFile(string $slug, string $path): Response
+    {
+        $file = $this->private->path($this->published($slug), $path) ?? throw new NotFoundHttpException();
+        return $this->send($file, true);
     }
 
     #[Route('/{slug}/raw/{path}', name: 'play_raw', requirements: ['slug' => '[a-z][a-z0-9-]+', 'path' => '.+'], methods: ['GET'], priority: 10)]

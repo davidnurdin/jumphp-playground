@@ -200,4 +200,40 @@ final class PlaygroundTest extends WebTestCase
         $this->get(self::APP, '/jeux');
         self::assertResponseRedirects('/games', 301);
     }
+
+    public function testPrivateFiles(): void
+    {
+        $this->client->loginUser($this->user);
+        $crawler = $this->client->request('GET', 'http://' . self::APP . '/studio/projet/test-game');
+        self::assertResponseIsSuccessful();
+        $token = $crawler->filter('[data-private] [name=_token]')->attr('value');
+        $data = tempnam(sys_get_temp_dir(), 'sqz');
+        file_put_contents($data, 'original game data');
+        $this->client->request('POST', 'http://' . self::APP . '/studio/projet/test-game/prives', ['_token' => $token, 'path' => 'assets/data/LEVEL0.SQZ'], [
+            'file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($data, 'LEVEL0.SQZ', null, null, true),
+        ]);
+        self::assertResponseIsSuccessful();
+        $this->client->request('POST', 'http://' . self::APP . '/studio/projet/test-game/prives', ['_token' => $token, 'path' => '../escape'], [
+            'file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($data, 'x', null, null, true),
+        ]);
+        self::assertResponseStatusCodeSame(400);
+
+        // the game loads it like its own files; the sources and the raw files do not show it
+        $this->get(self::PLAY, '/test-game/play/manifest.json');
+        $files = array_column(json_decode((string)$this->client->getResponse()->getContent(), true)['files'], null, 'path');
+        self::assertStringStartsWith('private/assets/data/LEVEL0.SQZ?v=', $files['assets/data/LEVEL0.SQZ']['url']);
+        $this->get(self::PLAY, '/test-game/play/' . $files['assets/data/LEVEL0.SQZ']['url']);
+        self::assertSame('original game data', $this->client->getInternalResponse()->getContent());
+        $this->get(self::PLAY, '/test-game/raw/assets/data/LEVEL0.SQZ');
+        self::assertResponseStatusCodeSame(404);
+        $this->get(self::APP, '/test-game/source/assets/data/LEVEL0.SQZ');
+        self::assertResponseStatusCodeSame(404);
+
+        // removed from the Studio
+        $this->client->loginUser($this->user);
+        $this->client->request('POST', 'http://' . self::APP . '/studio/projet/test-game/prives/fin', ['_token' => $token, 'remove' => ['assets/data/LEVEL0.SQZ']]);
+        self::assertResponseRedirects();
+        $this->get(self::PLAY, '/test-game/play/manifest.json');
+        self::assertCount(2, json_decode((string)$this->client->getResponse()->getContent(), true)['files']);
+    }
 }

@@ -6,6 +6,8 @@ use App\Entity\Project;
 use App\Entity\User;
 use App\Repository\CategoryRepository;
 use App\Repository\ProjectRepository;
+use App\Message\ShootProject;
+use App\Service\PrivateFiles;
 use App\Service\ProjectException;
 use App\Service\Projects;
 use App\Service\Publisher;
@@ -13,9 +15,11 @@ use App\Service\Slugs;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -28,6 +32,7 @@ final class StudioController extends AbstractController
         private CategoryRepository $categories,
         private Projects $service,
         private EntityManagerInterface $em,
+        private PrivateFiles $private,
         private string $appUrl,
     ) {
     }
@@ -108,6 +113,7 @@ final class StudioController extends AbstractController
         }
         return $this->render('studio/project.html.twig', [
             'project' => $project,
+            'private' => $this->private->index($project),
             'categories' => $this->categories->ordered(),
             'mcp_url' => rtrim($this->appUrl, '/') . '/mcp',
         ]);
@@ -129,8 +135,46 @@ final class StudioController extends AbstractController
         return $this->redirectToRoute('studio_project', ['slug' => $slug]);
     }
 
+    /** One private file (assets/app.js sends them one by one): path = folder + name. */
+    #[Route('/projet/{slug}/prives', name: 'studio_private_add', methods: ['POST'])]
+    public function privateAdd(string $slug, Request $request, #[CurrentUser] User $user): JsonResponse
+    {
+        $project = $this->owned($slug, $user);
+        if (!$this->isCsrfTokenValid('studio-project-' . $project->getId(), (string)$request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+        $file = $request->files->get('file');
+        if (!$file || !$file->isValid()) {
+            return new JsonResponse(['error' => 'Fichier manquant ou trop gros (' . PrivateFiles::MAX_FILE / 1048576 . ' Mo au plus).'], 400);
+        }
+        try {
+            $path = $this->private->add($project, (string)$request->request->get('path'), $file->getPathname());
+        } catch (ProjectException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 400);
+        }
+        return new JsonResponse(['path' => $path, 'size' => $file->getSize()]);
+    }
+
+    /** After a change of the private files: a new screenshot if the game's picture was one (it may have shown an error). */
+    #[Route('/projet/{slug}/prives/fin', name: 'studio_private_done', methods: ['POST'])]
+    public function privateDone(string $slug, Request $request, #[CurrentUser] User $user, MessageBusInterface $bus): Response
+    {
+        $project = $this->owned($slug, $user);
+        if (!$this->isCsrfTokenValid('studio-project-' . $project->getId(), (string)$request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+        foreach ((array)$request->request->all('remove') as $path) {
+            $this->private->remove($project, (string)$path);
+        }
+        if ($project->isPublished() && (!$project->hasThumbnail() || $project->isShotThumbnail())) {
+            $bus->dispatch(new ShootProject($project->getId(), true));
+        }
+        $this->addFlash('success', 'Fichiers privés à jour : le jeu les charge dès maintenant.');
+        return $this->redirectToRoute('studio_project', ['slug' => $slug]);
+    }
+
     #[Route('/projet/{slug}/retirer', name: 'studio_remove', methods: ['POST'])]
-    public function remove(string $slug, Request $request, #[CurrentUser] User $user, Publisher $publisher): Response
+    public function remove(string $slug, Request $request, #[CurrentUser] User $user, Publisher $publisher, PrivateFiles $private): Response
     {
         $project = $this->owned($slug, $user);
         if (!$this->isCsrfTokenValid('studio-remove-' . $project->getId(), (string)$request->request->get('_token'))) {
@@ -139,6 +183,7 @@ final class StudioController extends AbstractController
         $fs = new Filesystem();
         $fs->remove($publisher->repoDir($project));
         $fs->remove(dirname($publisher->repoDir($project), 2) . '/published/' . $project->getId());
+        $private->removeAll($project);
         $this->em->remove($project);
         $this->em->flush();
         $this->addFlash('success', "« {$project->getTitle()} » est retiré du playground (le dépôt GitHub reste à vous).");

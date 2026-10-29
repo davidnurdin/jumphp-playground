@@ -108,3 +108,35 @@ if (install && !standalone && 'serviceWorker' in navigator) {
 	});
 	document.addEventListener('click', (event) => { if (!install.contains(event.target)) help.hidden = true; });
 }
+
+// the private files of a game (Studio, StudioController::privateAdd): sent one by one, then the form (removals)
+const privateForm = document.querySelector('[data-private]');
+if (privateForm) {
+	privateForm.addEventListener('submit', async (event) => {
+		const files = [...privateForm.querySelector('[data-private-files]').files];
+		if (!files.length || privateForm.dataset.sent) return;
+		event.preventDefault();
+		const status = privateForm.querySelector('[data-private-status]');
+		const dir = privateForm.querySelector('[data-private-dir]').value.trim().replace(/^\/+|\/+$/g, '');
+		const token = privateForm.querySelector('[name=_token]').value;
+		privateForm.querySelector('button[type=submit]').disabled = true;
+		let done = 0;
+		for (const file of files) {
+			status.textContent = `Envoi ${done + 1} / ${files.length} : ${file.name}…`;
+			const body = new FormData();
+			body.append('_token', token);
+			body.append('path', (dir ? dir + '/' : '') + (file.webkitRelativePath || file.name));
+			body.append('file', file);
+			const response = await fetch(privateForm.dataset.private, { method: 'POST', body, credentials: 'same-origin' });
+			if (!response.ok) {
+				status.textContent = (await response.json().catch(() => ({}))).error || `Erreur ${response.status} sur ${file.name}`;
+				privateForm.querySelector('button[type=submit]').disabled = false;
+				return;
+			}
+			done++;
+		}
+		status.textContent = `${done} fichier(s) envoyé(s).`;
+		privateForm.dataset.sent = '1';
+		privateForm.submit();
+	});
+}

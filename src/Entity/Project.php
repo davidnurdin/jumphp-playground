@@ -87,6 +87,10 @@ class Project
     #[ORM\Column]
     private bool $listed = true;
 
+    /** its picture is a screenshot made by the playground (Screenshots), not one of its own */
+    #[ORM\Column]
+    private bool $shotThumbnail = false;
+
     #[ORM\Column]
     private int $plays = 0;
 
@@ -166,6 +170,8 @@ class Project
     public function hasSite(): bool { return $this->site !== null; }
     public function hasThumbnail(): bool { return $this->hasThumbnail; }
     public function setHasThumbnail(bool $has): void { $this->hasThumbnail = $has; }
+    public function isShotThumbnail(): bool { return $this->shotThumbnail; }
+    public function setShotThumbnail(bool $shot): void { $this->shotThumbnail = $shot; }
 
     /** After a sync: what is online now. */
     public function publish(string $sha, string $engineVersion, array $gameInfo, ?array $site, bool $hasThumbnail): void
@@ -176,6 +182,7 @@ class Project
         $this->gameInfo = $gameInfo;
         $this->site = $site;
         $this->hasThumbnail = $hasThumbnail;
+        $this->shotThumbnail = false;
         $this->setStatus(self::STATUS_READY);
     }
 

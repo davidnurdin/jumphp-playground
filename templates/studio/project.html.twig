@@ -57,6 +57,21 @@
 						<dt>Parties</dt><dd>{{ project.plays }}</dd>
 					</dl>
 				</div>
+				<form class="panel" method="post" action="{{ path('studio_private_done', {slug: project.slug}) }}" data-private="{{ path('studio_private_add', {slug: project.slug}) }}">
+					<h2>Fichiers privés</h2>
+					<p class="muted">Des fichiers que le jeu charge mais qui ne peuvent pas être dans le dépôt public (les données d'un jeu d'origine, par exemple). Ils ne sont ni sur GitHub, ni dans les sources, ni dans les forks ; seuls les joueurs les téléchargent en jouant.</p>
+					<input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}">
+					{% if private %}
+						<ul class="private-list">
+							{% for path, file in private %}<li><label><input type="checkbox" name="remove[]" value="{{ path }}"> <code>{{ path }}</code></label> <span class="faint">{{ (file.size / 1024)|round }} Ko</span></li>{% endfor %}
+						</ul>
+						<p class="faint">{{ private|length }} fichier{{ private|length > 1 ? 's' }}, {{ (private|reduce((sum, f) => sum + f.size, 0) / 1048576)|round(1) }} Mo. Cochez pour retirer.</p>
+					{% endif %}
+					<div class="field"><label for="private-dir">Dossier dans le jeu</label><input id="private-dir" value="assets/data" data-private-dir></div>
+					<div class="field"><label for="private-files">Fichiers ({{ constant('App\\Service\\PrivateFiles::MAX_FILE') // 1048576 }} Mo au plus chacun)</label><input id="private-files" type="file" multiple data-private-files></div>
+					<p class="faint" data-private-status></p>
+					<button class="btn" type="submit">Envoyer / retirer</button>
+				</form>
 				<form class="panel" method="post" action="{{ path('studio_remove', {slug: project.slug}) }}" onsubmit="return confirm('Retirer ce jeu du playground ? Le dépôt GitHub reste à vous.')">
 					<h2>Retirer du playground</h2>
 					<p class="muted">Le jeu quitte le site ; son dépôt GitHub n'est pas touché.</p>

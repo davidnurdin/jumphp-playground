@@ -58,6 +58,7 @@ final class Screenshots
             @unlink($file);
         }
         $project->setHasThumbnail(true);
+        $project->setShotThumbnail(true);
         $this->em->flush();
         return 'photographed';
     }

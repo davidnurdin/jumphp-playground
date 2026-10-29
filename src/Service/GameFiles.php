@@ -20,7 +20,7 @@ final class GameFiles
     public const IMAGE = '/\.(png|jpe?g|gif|webp|ico)$/i';
     public const MAX_EDIT = 512 * 1024;
 
-    public function __construct(private string $storageDir)
+    public function __construct(private string $storageDir, private PrivateFiles $private)
     {
     }
 
@@ -54,10 +54,22 @@ final class GameFiles
         return $parts ? implode('/', $parts) : null;
     }
 
+    /** What the browser loads: the published files, and the owner's private files on top (PrivateFiles). */
     public function manifest(Project $project): ?array
     {
         $dir = $this->dir($project);
-        return $dir ? json_decode((string)file_get_contents("$dir/manifest.json"), true) : null;
+        $manifest = $dir ? json_decode((string)file_get_contents("$dir/manifest.json"), true) : null;
+        if (!$manifest || !($private = $this->private->index($project))) {
+            return $manifest;
+        }
+        $files = array_column($manifest['files'], null, 'path');
+        foreach ($private as $path => $file) {
+            $files[$path] = ['path' => $path, 'hash' => $file['hash'], 'size' => $file['size'],
+                'url' => 'private/' . implode('/', array_map('rawurlencode', explode('/', $path))) . '?v=' . $file['hash']];
+        }
+        ksort($files, SORT_STRING);
+        $manifest['files'] = array_values($files);
+        return $manifest;
     }
 
     /**
