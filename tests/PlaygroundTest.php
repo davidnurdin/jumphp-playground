@@ -237,6 +237,7 @@ final class PlaygroundTest extends WebTestCase
 
     public function testCommentsIdeasIssuesAndProfiles(): void
     {
+        $this->client->setServerParameter('HTTP_ACCEPT_LANGUAGE', 'fr');
         $post = function (string $path, array $fields, string $origin = 'http://jumphp.test'): void {
             $this->client->request('POST', 'http://' . self::APP . $path, $fields, [], ['HTTP_ORIGIN' => $origin]);
         };
