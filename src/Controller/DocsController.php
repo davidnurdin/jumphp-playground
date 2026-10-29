@@ -4,15 +4,16 @@ namespace App\Controller;
 
 use League\CommonMark\GithubFlavoredMarkdownConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-/** The documentation: every way to make a game, the tutorials (content/docs/<page>.md, GitHub Markdown). */
+/** The documentation: every way to make a game, the tutorials (content/docs/<page>.md, GitHub Markdown; content/docs/en/<page>.md in English, else the French page). */
 #[Route(condition: "request.getHost() != env('PLAY_HOST')")]
 final class DocsController extends AbstractController
 {
-    /** the pages, in the order of the menu: group => [page => title] */
+    /** the pages, in the order of the menu: group => [page => title] (French, translated in the template) */
     public const PAGES = [
         'Créer un jeu' => [
             'index' => 'Toutes les façons',
@@ -41,10 +42,14 @@ final class DocsController extends AbstractController
 
     #[Route('/docs', name: 'docs', methods: ['GET'])]
     #[Route('/docs/{page}', name: 'docs_page', requirements: ['page' => '[a-z0-9-]+'], methods: ['GET'])]
-    public function page(string $page = 'index'): Response
+    public function page(Request $request, string $page = 'index'): Response
     {
         $order = array_merge(...array_values(array_map(fn (array $group) => array_keys($group), self::PAGES)));
-        $file = $this->getParameter('kernel.project_dir') . "/content/docs/$page.md";
+        $dir = $this->getParameter('kernel.project_dir') . '/content/docs';
+        $file = "$dir/$page.md";
+        if ($request->getLocale() === 'en' && is_file("$dir/en/$page.md")) {
+            $file = "$dir/en/$page.md";
+        }
         $at = array_search($page, $order, true);
         if ($at === false || !is_file($file)) {
             throw new NotFoundHttpException();

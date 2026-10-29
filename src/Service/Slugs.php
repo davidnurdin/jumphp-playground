@@ -27,16 +27,16 @@ final class Slugs
     }
 
     /** Why this slug cannot be used, or null. */
-    public function problem(string $slug): ?string
+    public function problem(string $slug): ?ProjectException
     {
         if (!preg_match('/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/', $slug) || str_contains($slug, '--')) {
-            return 'Le nom doit faire 3 à 40 caractères : lettres minuscules, chiffres et tirets, en commençant par une lettre.';
+            return new ProjectException('Le nom doit faire 3 à 40 caractères : lettres minuscules, chiffres et tirets, en commençant par une lettre.');
         }
         if (in_array($slug, self::RESERVED, true)) {
-            return "« $slug » est réservé.";
+            return new ProjectException('« %slug% » est réservé.', ['%slug%' => $slug]);
         }
         if ($this->projects->findOneBy(['slug' => $slug])) {
-            return "« $slug » est déjà pris.";
+            return new ProjectException('« %slug% » est déjà pris.', ['%slug%' => $slug]);
         }
         return null;
     }

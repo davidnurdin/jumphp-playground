@@ -1,12 +1,12 @@
 {# install the game as an app (assets/app.js: data-install): the browser's prompt, or how to do it on an iPhone #}
 {% if project.publishedSha %}
 <div class="install" data-install="{{ path('game_sw', {slug: project.slug}) }}" data-scope="/{{ project.slug }}" hidden>
-	<button class="btn small" type="button" title="Installer le jeu comme une application">
+	<button class="btn small" type="button" title="{{ 'Installer le jeu comme une application'|trans }}">
 		<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 3h2v9.2l3.3-3.3 1.4 1.4L12 16l-5.7-5.7 1.4-1.4 3.3 3.3zM5 18h14v2H5z"/></svg>
-		<span>Installer</span>
+		<span>{{ 'Installer'|trans }}</span>
 	</button>
 	<div class="share-menu install-help" hidden>
-		<p>Sur iPhone / iPad : touchez <b>Partager</b> <span aria-hidden="true">⎋</span> en bas de Safari, puis <b>« Sur l'écran d'accueil »</b>.</p>
+		<p>{{ 'Sur iPhone / iPad : touchez <b>Partager</b> <span aria-hidden="true">⎋</span> en bas de Safari, puis <b>« Sur l\'écran d\'accueil »</b>.'|trans|raw }}</p>
 	</div>
 </div>
 {% endif %}

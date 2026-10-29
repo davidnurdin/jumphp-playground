@@ -1,83 +1,83 @@
 {% extends 'base.html.twig' %}
-{% block title %}{{ project.title }} – studio JumPHP{% endblock %}
+{% block title %}{{ '%title% – studio JumPHP'|trans({'%title%': project.title}) }}{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% if project.status == 'creating' %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
 {% block body %}
-{% set prompt = 'Utilise le serveur MCP jumphp : développe le jeu « ' ~ project.title ~ ' » (projet ' ~ project.slug ~ ' du playground). Clone le dépôt, lis games/' ~ project.gameId ~ '/BRIEF.md et AGENTS.md, écris le jeu, teste-le, fais sa page d\'accueil (site/), pousse, puis publie-le avec sync_project et ajoute-le à l\'annuaire quand il est prêt.' %}
+{% set prompt = 'Utilise le serveur MCP jumphp : développe le jeu « %title% » (projet %slug% du playground). Clone le dépôt, lis games/%game%/BRIEF.md et AGENTS.md, écris le jeu, teste-le, fais sa page d\'accueil (site/), pousse, puis publie-le avec sync_project et ajoute-le à l\'annuaire quand il est prêt.'|trans({'%title%': project.title, '%slug%': project.slug, '%game%': project.gameId}) %}
 <section class="section">
 	<div class="wrap">
 		<div class="section-head">
 			<h1>{{ project.title }} <span class="badge {{ project.status }}">{{ project.status }}</span></h1>
 			<div class="actions">
-				<a class="btn" href="{{ path('game', {slug: project.slug}) }}">Page du jeu</a>
-				{% if project.publishedSha %}<a class="btn" href="{{ path('game_edit', {slug: project.slug}) }}">Éditeur</a>{% endif %}
+				<a class="btn" href="{{ path('game', {slug: project.slug}) }}">{{ 'Page du jeu'|trans }}</a>
+				{% if project.publishedSha %}<a class="btn" href="{{ path('game_edit', {slug: project.slug}) }}">{{ 'Éditeur'|trans }}</a>{% endif %}
 				<a class="btn" href="{{ project.repoUrl }}">GitHub</a>
-				<form method="post" action="{{ path('studio_sync', {slug: project.slug}) }}"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn" type="submit" {{ project.status == 'creating' ? 'disabled' }}>↻ Synchroniser</button></form>
+				<form method="post" action="{{ path('studio_sync', {slug: project.slug}) }}"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn" type="submit" {{ project.status == 'creating' ? 'disabled' }}>↻ {{ 'Synchroniser'|trans }}</button></form>
 			</div>
 		</div>
-		{% if project.status == 'creating' %}<div class="flash success">Le dépôt GitHub se prépare (quelques secondes)… cette page se recharge toute seule.</div>{% endif %}
-		{% if project.statusMessage %}<pre class="code">{{ project.statusMessage }}</pre>{% endif %}
+		{% if project.status == 'creating' %}<div class="flash success">{{ 'Le dépôt GitHub se prépare (quelques secondes)… cette page se recharge toute seule.'|trans }}</div>{% endif %}
+		{% if project.statusMessage %}<pre class="code">{{ project.statusMessage|trans }}</pre>{% endif %}
 
 		<div class="two" style="margin-top: 18px">
 			<div>
 				<div class="panel">
-					<h2>Faire écrire le jeu par votre Claude</h2>
+					<h2>{{ 'Faire écrire le jeu par votre Claude'|trans }}</h2>
 					<ol class="muted" style="padding-left: 20px">
-						<li>Une seule fois : <a href="{{ path('studio_mcp') }}">connectez votre Claude au playground</a> (jeton MCP){% if app.user.hasMcpToken %} — <b style="color: var(--green)">fait ✓</b>{% endif %}.</li>
-						<li>Dans un terminal, dans le dossier où vous rangez vos projets, lancez Claude Code avec ce message :</li>
+						<li>{{ 'Une seule fois : <a href="%url%">connectez votre Claude au playground</a> (jeton MCP)'|trans({'%url%': path('studio_mcp')|e})|raw }}{% if app.user.hasMcpToken %} — <b style="color: var(--green)">{{ 'fait'|trans }} ✓</b>{% endif %}.</li>
+						<li>{{ 'Dans un terminal, dans le dossier où vous rangez vos projets, lancez Claude Code avec ce message :'|trans }}</li>
 					</ol>
-					<div class="cmd"><code id="cmd-claude">claude "{{ prompt|replace({'"': '\\"'}) }}"</code><button class="btn small" type="button" data-copy="#cmd-claude">Copier</button></div>
-					<p class="muted">Il clone <code>{{ project.repoFullName }}</code>, écrit le jeu dans <code>{{ project.gameDir }}</code>, le teste avec Docker, pousse, et le publie ici. Sans Claude : clonez le dépôt et suivez son AGENTS.md ; chaque push sur <code>{{ project.defaultBranch }}</code> est publié.</p>
-					<div class="cmd"><code id="cmd-clone">git clone {{ project.cloneUrl }}</code><button class="btn small" type="button" data-copy="#cmd-clone">Copier</button></div>
+					<div class="cmd"><code id="cmd-claude">claude "{{ prompt|replace({'"': '\\"'}) }}"</code><button class="btn small" type="button" data-copy="#cmd-claude">{{ 'Copier'|trans }}</button></div>
+					<p class="muted">{{ 'Il clone <code>%repo%</code>, écrit le jeu dans <code>%dir%</code>, le teste avec Docker, pousse, et le publie ici. Sans Claude : clonez le dépôt et suivez son AGENTS.md ; chaque push sur <code>%branch%</code> est publié.'|trans({'%repo%': project.repoFullName|e, '%dir%': project.gameDir|e, '%branch%': project.defaultBranch|e})|raw }}</p>
+					<div class="cmd"><code id="cmd-clone">git clone {{ project.cloneUrl }}</code><button class="btn small" type="button" data-copy="#cmd-clone">{{ 'Copier'|trans }}</button></div>
 				</div>
 				<form method="post" class="panel">
-					<h2>Informations</h2>
+					<h2>{{ 'Informations'|trans }}</h2>
 					<input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}">
-					<div class="field"><label for="title">Titre</label><input id="title" name="title" value="{{ project.title }}" maxlength="80"></div>
-					<div class="field"><label for="description">Description courte</label><input id="description" name="description" value="{{ project.description }}" maxlength="300"></div>
+					<div class="field"><label for="title">{{ 'Titre'|trans }}</label><input id="title" name="title" value="{{ project.title }}" maxlength="80"></div>
+					<div class="field"><label for="description">{{ 'Description courte'|trans }}</label><input id="description" name="description" value="{{ project.description }}" maxlength="300"></div>
 					<div class="field">
-						<label for="category">Catégorie</label>
-						<select id="category" name="category">{% for category in categories %}<option value="{{ category.slug }}" {{ project.category.id == category.id ? 'selected' }}>{{ category.name }}</option>{% endfor %}</select>
+						<label for="category">{{ 'Catégorie'|trans }}</label>
+						<select id="category" name="category">{% for category in categories %}<option value="{{ category.slug }}" {{ project.category.id == category.id ? 'selected' }}>{{ category.name|trans }}</option>{% endfor %}</select>
 					</div>
-					<div class="field"><label for="brief">Le jeu, en détail</label><textarea id="brief" name="brief" rows="8">{{ project.brief }}</textarea><div class="hint">Le BRIEF.md du dépôt ne change pas : dites à votre Claude ce qui a changé (ou update_project).</div></div>
-					<div class="field"><label class="inline"><input type="checkbox" name="listed" value="1" {{ project.listed ? 'checked' }} {{ not project.publishedSha ? 'disabled' }}> Visible dans l'annuaire</label></div>
-					<button class="btn primary" type="submit">Enregistrer</button>
+					<div class="field"><label for="brief">{{ 'Le jeu, en détail'|trans }}</label><textarea id="brief" name="brief" rows="8">{{ project.brief }}</textarea><div class="hint">{{ 'Le BRIEF.md du dépôt ne change pas : dites à votre Claude ce qui a changé (ou update_project).'|trans }}</div></div>
+					<div class="field"><label class="inline"><input type="checkbox" name="listed" value="1" {{ project.listed ? 'checked' }} {{ not project.publishedSha ? 'disabled' }}> {{ 'Visible dans l\'annuaire'|trans }}</label></div>
+					<button class="btn primary" type="submit">{{ 'Enregistrer'|trans }}</button>
 				</form>
 			</div>
 			<aside>
 				<div class="panel">
-					<h2>Publication</h2>
+					<h2>{{ 'Publication'|trans }}</h2>
 					<dl class="facts">
-						<dt>Adresse</dt><dd><a href="{{ path('game', {slug: project.slug}) }}">/{{ project.slug }}</a></dd>
-						<dt>Dépôt</dt><dd><a href="{{ project.repoUrl }}">{{ project.repoFullName }}</a></dd>
-						<dt>Type</dt><dd>{{ constant('App\\Entity\\Project::KINDS')[project.kind] }}</dd>
-						<dt>Jeu</dt><dd><code>{{ project.gameDir }}</code></dd>
+						<dt>{{ 'Adresse'|trans }}</dt><dd><a href="{{ path('game', {slug: project.slug}) }}">/{{ project.slug }}</a></dd>
+						<dt>{{ 'Dépôt'|trans }}</dt><dd><a href="{{ project.repoUrl }}">{{ project.repoFullName }}</a></dd>
+						<dt>{{ 'Type'|trans }}</dt><dd>{{ constant('App\\Entity\\Project::KINDS')[project.kind]|trans }}</dd>
+						<dt>{{ 'Jeu'|trans }}</dt><dd><code>{{ project.gameDir }}</code></dd>
 						<dt>Commit</dt><dd>{% if project.publishedSha %}<a href="{{ project.repoUrl }}/commit/{{ project.publishedSha }}">{{ project.publishedSha|slice(0, 7) }}</a> · {{ project.publishedAt|date('d/m H:i') }}{% else %}—{% endif %}</dd>
-						<dt>Moteur</dt><dd>{{ project.engineVersion ?: '—' }}</dd>
-						<dt>Site du jeu</dt><dd>{{ project.hasSite ? 'oui' : 'pas encore (site/)' }}</dd>
-						<dt>Webhook</dt><dd>{{ project.webhookId ? 'actif' : 'non : utilisez « Synchroniser »' }}</dd>
-						<dt>Parties</dt><dd>{{ project.plays }}</dd>
+						<dt>{{ 'Moteur'|trans }}</dt><dd>{{ project.engineVersion ?: '—' }}</dd>
+						<dt>{{ 'Site du jeu'|trans }}</dt><dd>{{ project.hasSite ? 'oui'|trans : 'pas encore (site/)'|trans }}</dd>
+						<dt>Webhook</dt><dd>{{ project.webhookId ? 'actif'|trans : 'non : utilisez « Synchroniser »'|trans }}</dd>
+						<dt>{{ 'Parties'|trans }}</dt><dd>{{ project.plays }}</dd>
 					</dl>
 				</div>
 				<form class="panel" method="post" action="{{ path('studio_private_done', {slug: project.slug}) }}" data-private="{{ path('studio_private_add', {slug: project.slug}) }}">
-					<h2>Fichiers privés</h2>
-					<p class="muted">Des fichiers que le jeu charge mais qui ne peuvent pas être dans le dépôt public (les données d'un jeu d'origine, par exemple). Ils ne sont ni sur GitHub, ni dans les sources, ni dans les forks ; seuls les joueurs les téléchargent en jouant.</p>
+					<h2>{{ 'Fichiers privés'|trans }}</h2>
+					<p class="muted">{{ 'Des fichiers que le jeu charge mais qui ne peuvent pas être dans le dépôt public (les données d\'un jeu d\'origine, par exemple). Ils ne sont ni sur GitHub, ni dans les sources, ni dans les forks ; seuls les joueurs les téléchargent en jouant.'|trans }}</p>
 					<input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}">
 					{% if private %}
 						<ul class="private-list">
-							{% for path, file in private %}<li><label><input type="checkbox" name="remove[]" value="{{ path }}"> <code>{{ path }}</code></label> <span class="faint">{{ (file.size / 1024)|round }} Ko</span></li>{% endfor %}
+							{% for path, file in private %}<li><label><input type="checkbox" name="remove[]" value="{{ path }}"> <code>{{ path }}</code></label> <span class="faint">{{ '%size% Ko'|trans({'%size%': (file.size / 1024)|round}) }}</span></li>{% endfor %}
 						</ul>
-						<p class="faint">{{ private|length }} fichier{{ private|length > 1 ? 's' }}, {{ (private|reduce((sum, f) => sum + f.size, 0) / 1048576)|round(1) }} Mo. Cochez pour retirer.</p>
+						<p class="faint">{{ (private|length > 1 ? '%count% fichiers, %size% Mo.' : '%count% fichier, %size% Mo.')|trans({'%count%': private|length, '%size%': (private|reduce((sum, f) => sum + f.size, 0) / 1048576)|round(1)}) }} {{ 'Cochez pour retirer.'|trans }}</p>
 					{% endif %}
-					<div class="field"><label for="private-dir">Dossier dans le jeu</label><input id="private-dir" value="assets/data" data-private-dir></div>
-					<div class="field"><label for="private-files">Fichiers ({{ constant('App\\Service\\PrivateFiles::MAX_FILE') // 1048576 }} Mo au plus chacun)</label><input id="private-files" type="file" multiple data-private-files></div>
+					<div class="field"><label for="private-dir">{{ 'Dossier dans le jeu'|trans }}</label><input id="private-dir" value="assets/data" data-private-dir></div>
+					<div class="field"><label for="private-files">{{ 'Fichiers (%max% Mo au plus chacun)'|trans({'%max%': constant('App\\Service\\PrivateFiles::MAX_FILE') // 1048576}) }}</label><input id="private-files" type="file" multiple data-private-files></div>
 					<p class="faint" data-private-status></p>
-					<button class="btn" type="submit">Envoyer / retirer</button>
+					<button class="btn" type="submit">{{ 'Envoyer / retirer'|trans }}</button>
 				</form>
-				<form class="panel" method="post" action="{{ path('studio_remove', {slug: project.slug}) }}" onsubmit="return confirm('Retirer ce jeu du playground ? Le dépôt GitHub reste à vous.')">
-					<h2>Retirer du playground</h2>
-					<p class="muted">Le jeu quitte le site ; son dépôt GitHub n'est pas touché.</p>
+				<form class="panel" method="post" action="{{ path('studio_remove', {slug: project.slug}) }}" onsubmit="return confirm({{ 'Retirer ce jeu du playground ? Le dépôt GitHub reste à vous.'|trans|json_encode }})">
+					<h2>{{ 'Retirer du playground'|trans }}</h2>
+					<p class="muted">{{ 'Le jeu quitte le site ; son dépôt GitHub n\'est pas touché.'|trans }}</p>
 					<input type="hidden" name="_token" value="{{ csrf_token('studio-remove-' ~ project.id) }}">
-					<button class="btn danger" type="submit">Retirer</button>
+					<button class="btn danger" type="submit">{{ 'Retirer'|trans }}</button>
 				</form>
 			</aside>
 		</div>

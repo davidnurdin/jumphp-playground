@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Each game installable on its own (a PWA): its manifest (start: the player /<slug>/jouer), its icons, and a
@@ -55,7 +56,7 @@ final class PwaController extends AbstractController
 
     /** The game's worker: needed to install it; the pages always come from the network (the game caches its own files). */
     #[Route('/{slug}/sw.js', name: 'game_sw', requirements: ['slug' => self::SLUG], methods: ['GET'], priority: -5)]
-    public function serviceWorker(string $slug): Response
+    public function serviceWorker(string $slug, TranslatorInterface $translator): Response
     {
         $this->published($slug);
         $js = <<<'JS'
@@ -65,10 +66,11 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 self.addEventListener('fetch', (event) => {
 	if (event.request.mode !== 'navigate') return;
 	event.respondWith(fetch(event.request).catch(() => new Response(
-		'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="background:#000;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center">Pas de connexion : le jeu reviendra avec le réseau.',
+		'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="background:#000;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center">%offline%',
 		{ headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
 });
 JS;
+        $js = strtr($js, ['%offline%' => htmlspecialchars($translator->trans('Pas de connexion : le jeu reviendra avec le réseau.'), ENT_QUOTES)]);
         return new Response($js, 200, [
             'Content-Type' => 'text/javascript; charset=utf-8',
             'Cache-Control' => 'no-cache',

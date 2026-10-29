@@ -1,21 +1,21 @@
 {% extends 'base.html.twig' %}
-{% block title %}Mes jeux – studio JumPHP{% endblock %}
+{% block title %}{{ 'Mes jeux – studio JumPHP'|trans }}{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 <section class="section">
 	<div class="wrap">
 		<div class="section-head">
-			<h1>Mes jeux</h1>
+			<h1>{{ 'Mes jeux'|trans }}</h1>
 			<div class="actions">
-				<a class="btn primary" href="{{ path('studio_new') }}">+ Nouveau jeu</a>
-				<a class="btn" href="{{ path('studio_import') }}">Importer un dépôt</a>
-				<a class="btn" href="{{ path('studio_mcp') }}">Connecter mon Claude (MCP)</a>
+				<a class="btn primary" href="{{ path('studio_new') }}">+ {{ 'Nouveau jeu'|trans }}</a>
+				<a class="btn" href="{{ path('studio_import') }}">{{ 'Importer un dépôt'|trans }}</a>
+				<a class="btn" href="{{ path('studio_mcp') }}">{{ 'Connecter mon Claude (MCP)'|trans }}</a>
 			</div>
 		</div>
 		{% if not app.user.hasMcpToken %}
 			<div class="panel" style="margin-bottom: 18px">
-				<h2>Première fois ?</h2>
-				<p class="muted">Votre Claude (Claude Code, sur votre machine) écrit le jeu à votre place. Donnez-lui accès au playground une fois pour toutes : <a href="{{ path('studio_mcp') }}">créer mon jeton MCP</a>. Il lui faut aussi Docker (JumPHP teste et compile tout dans Docker).</p>
+				<h2>{{ 'Première fois ?'|trans }}</h2>
+				<p class="muted">{{ 'Votre Claude (Claude Code, sur votre machine) écrit le jeu à votre place. Donnez-lui accès au playground une fois pour toutes : <a href="%url%">créer mon jeton MCP</a>. Il lui faut aussi Docker (JumPHP teste et compile tout dans Docker).'|trans({'%url%': path('studio_mcp')|e})|raw }}</p>
 			</div>
 		{% endif %}
 		{% if projects %}
@@ -23,15 +23,15 @@
 				{% for project in projects %}
 					<tr>
 						<td><a href="{{ path('studio_project', {slug: project.slug}) }}">{{ project.title }}</a> <span class="faint">/{{ project.slug }}</span></td>
-						<td><span class="badge {{ project.status }}">{{ project.status }}</span> {% if project.listed %}<span class="badge">annuaire</span>{% endif %}</td>
-						<td class="size">{{ project.publishedAt ? 'publié le ' ~ project.publishedAt|date('d/m/Y H:i') : 'pas encore publié' }}</td>
+						<td><span class="badge {{ project.status }}">{{ project.status }}</span> {% if project.listed %}<span class="badge">{{ 'annuaire'|trans }}</span>{% endif %}</td>
+						<td class="size">{{ project.publishedAt ? 'publié le %date%'|trans({'%date%': project.publishedAt|date('d/m/Y H:i')}) : 'pas encore publié'|trans }}</td>
 					</tr>
 				{% endfor %}
 			</table>
 		{% else %}
 			<div class="panel empty-state">
-				<p>Aucun jeu pour l'instant.</p>
-				<a class="btn primary big" href="{{ path('studio_new') }}">Créer mon premier jeu</a>
+				<p>{{ 'Aucun jeu pour l\'instant.'|trans }}</p>
+				<a class="btn primary big" href="{{ path('studio_new') }}">{{ 'Créer mon premier jeu'|trans }}</a>
 			</div>
 		{% endif %}
 	</div>

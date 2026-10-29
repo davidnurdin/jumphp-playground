@@ -1,5 +1,5 @@
 {% extends 'base.html.twig' %}
-{% block title %}Jouer à {{ project.title }} – JumPHP playground{% endblock %}
+{% block title %}{{ 'Jouer à %title%'|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
 {% block description %}{{ project.description ?: project.title }}{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ url('game', {slug: project.slug}) }}">{% endblock %}
 {% block pwa %}{% include 'game/_pwa_head.html.twig' %}{% endblock %}

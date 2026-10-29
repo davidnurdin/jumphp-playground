@@ -20,6 +20,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * The online editor's API: a game's files with the author's drafts on top (their session of the game), saved
@@ -37,6 +38,7 @@ final class EditorApiController extends AbstractController
         private GameFiles $files,
         private EntityManagerInterface $em,
         private Sandbox $sandbox,
+        private TranslatorInterface $translator,
         private string $playUrl,
     ) {
     }
@@ -86,11 +88,11 @@ final class EditorApiController extends AbstractController
         $content = (string)($data['content'] ?? '');
         $max = $who->isVisitor() ? Sandbox::MAX_FILE : GameFiles::MAX_EDIT;
         if (strlen($content) > $max || !GameFiles::isText($path)) {
-            return new JsonResponse(['error' => sprintf('Fichier texte de %d Ko au plus.', $max / 1024)], 400);
+            return new JsonResponse(['error' => $this->translator->trans('Fichier texte de %max% Ko au plus.', ['%max%' => intdiv($max, 1024)])], 400);
         }
         $draft = $this->drafts->forPath($who, $project, $path);
         if (!$draft && $who->isVisitor() && count($this->drafts->of($who, $project)) >= Sandbox::MAX_FILES) {
-            return new JsonResponse(['error' => sprintf('Le bac à sable garde %d fichiers modifiés au plus.', Sandbox::MAX_FILES)], 400);
+            return new JsonResponse(['error' => $this->translator->trans('Le bac à sable garde %count% fichiers modifiés au plus.', ['%count%' => Sandbox::MAX_FILES])], 400);
         }
         $draft ??= $who->newDraft($project, $path);
         $published = $this->files->path($project, $path);
@@ -160,7 +162,7 @@ final class EditorApiController extends AbstractController
         try {
             $sha = $service->push($user, $project, (string)($request->toArray()['message'] ?? ''));
         } catch (ProjectException $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 409);
+            return new JsonResponse(['error' => $e->trans($this->translator)], 409);
         }
         return new JsonResponse(['commit' => $sha, 'url' => $project->getRepoUrl() . '/commit/' . $sha]);
     }

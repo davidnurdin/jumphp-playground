@@ -1,12 +1,12 @@
 {# share a game: the phone's share sheet (Web Share API), else a menu of social networks (assets/app.js: data-share) #}
 {% set share_url = app_url|trim('/', 'right') ~ path('game', {slug: project.slug}) %}
-{% set share_text = project.title ~ ' : un jeu rétro en PHP, jouable dans le navigateur' %}
+{% set share_text = '%title% : un jeu rétro en PHP, jouable dans le navigateur'|trans({'%title%': project.title}) %}
 {% set u = share_url|url_encode %}
 {% set t = share_text|url_encode %}
 <div class="share" data-share data-url="{{ share_url }}" data-title="{{ project.title }}" data-text="{{ share_text }}">
-	<button class="btn small" type="button" aria-haspopup="true" aria-expanded="false" title="Partager">
+	<button class="btn small" type="button" aria-haspopup="true" aria-expanded="false" title="{{ 'Partager'|trans }}">
 		<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 16.1c-.8 0-1.5.3-2 .8l-7.1-4.2c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .5.1.7L8 9.8C7.5 9.3 6.8 9 6 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l7.1 4.2c-.1.2-.1.4-.1.6 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9-1.2-2.9-2.8-2.9z"/></svg>
-		<span>Partager</span>
+		<span>{{ 'Partager'|trans }}</span>
 	</button>
 	<div class="share-menu" role="menu" hidden>
 		<a role="menuitem" href="https://twitter.com/intent/tweet?url={{ u }}&text={{ t }}" target="_blank" rel="noopener">X (Twitter)</a>
@@ -16,7 +16,7 @@
 		<a role="menuitem" href="https://www.reddit.com/submit?url={{ u }}&title={{ t }}" target="_blank" rel="noopener">Reddit</a>
 		<a role="menuitem" href="https://wa.me/?text={{ (share_text ~ ' ' ~ share_url)|url_encode }}" target="_blank" rel="noopener">WhatsApp</a>
 		<a role="menuitem" href="https://t.me/share/url?url={{ u }}&text={{ t }}" target="_blank" rel="noopener">Telegram</a>
-		<a role="menuitem" href="mailto:?subject={{ project.title|url_encode }}&body={{ (share_text ~ '\n' ~ share_url)|url_encode }}">E-mail</a>
-		<button role="menuitem" type="button" data-share-copy>Copier le lien</button>
+		<a role="menuitem" href="mailto:?subject={{ project.title|url_encode }}&body={{ (share_text ~ '\n' ~ share_url)|url_encode }}">{{ 'E-mail'|trans }}</a>
+		<button role="menuitem" type="button" data-share-copy>{{ 'Copier le lien'|trans }}</button>
 	</div>
 </div>

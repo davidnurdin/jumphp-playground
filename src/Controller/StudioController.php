@@ -22,6 +22,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /** The creators' side: their projects, a new game, an import, the MCP token for their Claude. */
 #[Route('/studio')]
@@ -33,6 +34,7 @@ final class StudioController extends AbstractController
         private Projects $service,
         private EntityManagerInterface $em,
         private PrivateFiles $private,
+        private TranslatorInterface $translator,
         private string $appUrl,
     ) {
     }
@@ -62,7 +64,7 @@ final class StudioController extends AbstractController
                 $this->addFlash('success', 'Projet créé : le dépôt GitHub se prépare.');
                 return $this->redirectToRoute('studio_project', ['slug' => $project->getSlug()]);
             } catch (ProjectException $e) {
-                $this->addFlash('error', $e->getMessage());
+                $this->addFlash('error', $e->trans($this->translator));
             }
         }
         return $this->render('studio/new.html.twig', ['form' => $form, 'kinds' => Project::KINDS, 'categories' => $this->categories->ordered()]);
@@ -83,7 +85,7 @@ final class StudioController extends AbstractController
                 $this->addFlash('success', 'Dépôt importé : la publication est en cours.');
                 return $this->redirectToRoute('studio_project', ['slug' => $project->getSlug()]);
             } catch (ProjectException $e) {
-                $this->addFlash('error', $e->getMessage());
+                $this->addFlash('error', $e->trans($this->translator));
             }
         }
         return $this->render('studio/import.html.twig', ['form' => $form, 'categories' => $this->categories->ordered()]);
@@ -128,9 +130,9 @@ final class StudioController extends AbstractController
         }
         $result = $publisher->sync($project, true);
         match ($result->status) {
-            'published' => $this->addFlash('success', 'Publié : commit ' . substr((string)$result->sha, 0, 7) . '.'),
+            'published' => $this->addFlash('success', $this->translator->trans('Publié : commit %sha%.', ['%sha%' => substr((string)$result->sha, 0, 7)])),
             'unchanged' => $this->addFlash('success', 'Déjà à jour.'),
-            default => $this->addFlash('error', "Non publié :\n" . implode("\n", $result->errors)),
+            default => $this->addFlash('error', $this->translator->trans('Non publié :') . "\n" . implode("\n", $result->errors)),
         };
         return $this->redirectToRoute('studio_project', ['slug' => $slug]);
     }
@@ -145,12 +147,12 @@ final class StudioController extends AbstractController
         }
         $file = $request->files->get('file');
         if (!$file || !$file->isValid()) {
-            return new JsonResponse(['error' => 'Fichier manquant ou trop gros (' . PrivateFiles::MAX_FILE / 1048576 . ' Mo au plus).'], 400);
+            return new JsonResponse(['error' => $this->translator->trans('Fichier manquant ou trop gros (%max% Mo au plus).', ['%max%' => intdiv(PrivateFiles::MAX_FILE, 1048576)])], 400);
         }
         try {
             $path = $this->private->add($project, (string)$request->request->get('path'), $file->getPathname());
         } catch (ProjectException $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 400);
+            return new JsonResponse(['error' => $e->trans($this->translator)], 400);
         }
         return new JsonResponse(['path' => $path, 'size' => $file->getSize()]);
     }
@@ -186,7 +188,7 @@ final class StudioController extends AbstractController
         $private->removeAll($project);
         $this->em->remove($project);
         $this->em->flush();
-        $this->addFlash('success', "« {$project->getTitle()} » est retiré du playground (le dépôt GitHub reste à vous).");
+        $this->addFlash('success', $this->translator->trans('« %title% » est retiré du playground (le dépôt GitHub reste à vous).', ['%title%' => $project->getTitle()]));
         return $this->redirectToRoute('studio');
     }
 

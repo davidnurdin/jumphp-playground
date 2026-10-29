@@ -46,7 +46,7 @@ final class ProjectImportCommand extends Command
     {
         $slug = $input->getArgument('slug');
         if ($problem = $this->slugs->problem($slug)) {
-            $output->writeln("<error>$problem</error>");
+            $output->writeln("<error>{$problem->getMessage()}</error>");
             return Command::FAILURE;
         }
         $category = $this->categories->findOneBy(['slug' => $input->getArgument('category')]);

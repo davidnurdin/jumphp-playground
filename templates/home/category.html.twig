@@ -1,25 +1,25 @@
 {% extends 'base.html.twig' %}
-{% block title %}Jeux {{ category.name|lower }} gratuits en ligne – JumPHP playground{% endblock %}
-{% block description %}{{ category.description }} {{ total }} jeu{{ total > 1 ? 'x' }} écrits en PHP avec JumPHP, à jouer dans le navigateur.{% endblock %}
+{% block title %}{{ 'Jeux %category% gratuits en ligne – JumPHP playground'|trans({'%category%': category.name|trans|lower}) }}{% endblock %}
+{% block description %}{{ category.description|trans }} {{ '%count% jeu écrit en PHP avec JumPHP, à jouer dans le navigateur.|%count% jeux écrits en PHP avec JumPHP, à jouer dans le navigateur.'|trans({'%count%': total}) }}{% endblock %}
 {% block body %}
 <section class="section">
 	<div class="wrap">
-		<nav class="chips" aria-label="Catégories">
-			{% for c in categories %}<a class="chip {{ c.id == category.id ? 'on' }}" href="{{ path('category', {slug: c.slug}) }}">{{ c.name }}</a>{% endfor %}
+		<nav class="chips" aria-label="{{ 'Catégories'|trans }}">
+			{% for c in categories %}<a class="chip {{ c.id == category.id ? 'on' }}" href="{{ path('category', {slug: c.slug}) }}">{{ c.name|trans }}</a>{% endfor %}
 		</nav>
-		<h1>{{ category.name }}</h1>
-		<p class="muted">{{ category.description }}</p>
+		<h1>{{ category.name|trans }}</h1>
+		<p class="muted">{{ category.description|trans }}</p>
 		{% if games %}
 			<div class="grid">{% for game in games %}{% include '_card.html.twig' %}{% endfor %}</div>
 			{% if pages > 1 %}
 			<nav class="pager" aria-label="Pages">
-				{% if page > 1 %}<a class="btn small" href="{{ path('category', {slug: category.slug, page: page - 1}) }}">← Précédents</a>{% endif %}
-				<span class="muted">Page {{ page }} / {{ pages }}</span>
-				{% if page < pages %}<a class="btn small" href="{{ path('category', {slug: category.slug, page: page + 1}) }}">Suivants →</a>{% endif %}
+				{% if page > 1 %}<a class="btn small" href="{{ path('category', {slug: category.slug, page: page - 1}) }}">← {{ 'Précédents'|trans }}</a>{% endif %}
+				<span class="muted">{{ 'Page %page% / %pages%'|trans({'%page%': page, '%pages%': pages}) }}</span>
+				{% if page < pages %}<a class="btn small" href="{{ path('category', {slug: category.slug, page: page + 1}) }}">{{ 'Suivants'|trans }} →</a>{% endif %}
 			</nav>
 			{% endif %}
 		{% else %}
-			<div class="panel empty-state">Aucun jeu dans cette catégorie pour l'instant. <a href="{{ path('studio') }}">Créez le premier !</a></div>
+			<div class="panel empty-state">{{ 'Aucun jeu dans cette catégorie pour l\'instant.'|trans }} <a href="{{ path('studio') }}">{{ 'Créez le premier !'|trans }}</a></div>
 		{% endif %}
 	</div>
 </section>

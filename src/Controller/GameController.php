@@ -22,6 +22,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * A game on the portal (<APP_URL>/<slug>): its page (its own site in a frame of the games origin, or
@@ -131,7 +132,7 @@ final class GameController extends AbstractController
 
     #[Route('/{slug}/fork', name: 'game_fork', requirements: ['slug' => self::SLUG], methods: ['POST'], priority: -10)]
     #[IsGranted('ROLE_USER')]
-    public function fork(string $slug, Request $request, #[CurrentUser] User $user, Projects $service): Response
+    public function fork(string $slug, Request $request, #[CurrentUser] User $user, Projects $service, TranslatorInterface $translator): Response
     {
         $project = $this->visible($slug, $user);
         if (!$this->isCsrfTokenValid('fork-' . $project->getId(), (string)$request->request->get('_token'))) {
@@ -140,7 +141,7 @@ final class GameController extends AbstractController
         try {
             $fork = $service->fork($user, $project, trim((string)$request->request->get('slug')));
         } catch (ProjectException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->trans($translator));
             return $this->redirectToRoute('game', ['slug' => $slug]);
         }
         $this->addFlash('success', 'Fork en cours sur GitHub : votre copie sera prête dans quelques secondes.');

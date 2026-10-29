@@ -1,8 +1,8 @@
 {% extends 'base.html.twig' %}
-{% block title %}Connexion indisponible{% endblock %}
+{% block title %}{{ 'Connexion indisponible'|trans }}{% endblock %}
 {% block body %}
 <section class="section"><div class="wrap"><div class="panel">
-	<h1>Connexion GitHub pas encore configurée</h1>
-	<p class="muted">L'administrateur doit créer une OAuth App GitHub (callback <code>{{ app_url|trim('/', 'right') }}/connect/github/check</code>) et renseigner GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET.</p>
+	<h1>{{ 'Connexion GitHub pas encore configurée'|trans }}</h1>
+	<p class="muted">{{ 'L\'administrateur doit créer une OAuth App GitHub (callback <code>%callback%</code>) et renseigner GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET.'|trans({'%callback%': (app_url|trim('/', 'right') ~ '/connect/github/check')|e})|raw }}</p>
 </div></div></section>
 {% endblock %}

@@ -14,6 +14,20 @@ import { yaml } from '@codemirror/lang-yaml';
 import { markdown } from '@codemirror/lang-markdown';
 
 const root = document.getElementById('editor');
+// the editor's messages, in the page's language (<html lang>)
+const T = document.documentElement.lang === 'en' ? {
+	binary: (kb) => `Binary file (${kb} KB): it can't be edited here.`,
+	draft: 'modified (draft)', same: 'same as the published version', saved: 'saved', error: 'error: ',
+	sending: 'sending…', sent: (sha) => `sent: ${sha} (publishing)`,
+	confirmDelete: (path) => `Delete ${path} (in your changes)?`,
+	confirmReset: 'Erase all your changes and start again from the original game?', reset: 'Everything is back to the original.',
+} : {
+	binary: (kb) => `Fichier binaire (${kb} Ko) : il ne s'édite pas ici.`,
+	draft: 'modifié (brouillon)', same: 'identique à la version publiée', saved: 'enregistré', error: 'erreur : ',
+	sending: 'envoi…', sent: (sha) => `envoyé : ${sha} (publication en cours)`,
+	confirmDelete: (path) => `Supprimer ${path} (dans vos modifications) ?`,
+	confirmReset: 'Effacer toutes vos modifications et repartir du jeu d\'origine ?', reset: 'Tout est revenu à l\'origine.',
+};
 if (root) {
 	const $ = (id) => document.getElementById(id);
 	const API = root.dataset.api;
@@ -121,7 +135,7 @@ if (root) {
 				img.style.cssText = 'image-rendering: pixelated; max-width: 100%; max-height: 100%';
 				box.append(img);
 			} else {
-				box.textContent = `Fichier binaire (${Math.round(data.size / 1024)} Ko) : il ne s'édite pas ici.`;
+				box.textContent = T.binary(Math.round(data.size / 1024));
 			}
 			code.append(box);
 		} else {
@@ -137,7 +151,7 @@ if (root) {
 		}
 		for (const a of tree.querySelectorAll('a.on')) a.classList.remove('on');
 		tree.querySelector(`a[data-path="${CSS.escape(path)}"]`)?.classList.add('on');
-		say(data.draft ? 'modifié (brouillon)' : '');
+		say(data.draft ? T.draft : '');
 	}
 	function schedule() {
 		say('…');
@@ -149,11 +163,11 @@ if (root) {
 		if (!current?.view) return;
 		try {
 			const result = await api('PUT', '/file', { path: current.path, content: current.view.state.doc.toString() });
-			say(result.state === 'published' ? 'identique à la version publiée' : 'enregistré');
+			say(result.state === 'published' ? T.same : T.saved);
 			const known = files.find((f) => f.path === current.path);
 			if (!known || known.state !== result.state) await loadTree();
 			$('btn-revert').disabled = result.state === 'published';
-		} catch (e) { say('erreur : ' + e.message); }
+		} catch (e) { say(T.error + e.message); }
 	}
 	async function flush() { if (saveTimer) { clearTimeout(saveTimer); await save(); } }
 	addEventListener('keydown', (event) => {
@@ -191,7 +205,7 @@ if (root) {
 		await loadTree();
 		open(current.path).catch(() => {});
 	});
-	function confirmDelete(path) { return window.confirm(`Supprimer ${path} (dans vos modifications) ?`); }
+	function confirmDelete(path) { return window.confirm(T.confirmDelete(path)); }
 
 	const preview = $('preview');
 	async function play() {
@@ -210,10 +224,10 @@ if (root) {
 		dialog.showModal();
 		dialog.addEventListener('close', async () => {
 			if (dialog.returnValue !== 'ok') return;
-			say('envoi…');
+			say(T.sending);
 			try {
 				const result = await api('POST', '/push', { message: $('push-message').value });
-				say('envoyé : ' + result.commit.slice(0, 7) + ' (publication en cours)');
+				say(T.sent(result.commit.slice(0, 7)));
 				await loadTree();
 				if (current) open(current.path);
 			} catch (e) { say(e.message); }
@@ -221,14 +235,14 @@ if (root) {
 	});
 	$('btn-fork')?.addEventListener('click', async () => { await flush(); $('dlg-fork').showModal(); });
 	$('btn-reset')?.addEventListener('click', async () => {
-		if (!window.confirm('Effacer toutes vos modifications et repartir du jeu d\'origine ?')) return;
+		if (!window.confirm(T.confirmReset)) return;
 		clearTimeout(saveTimer); saveTimer = null;
 		await api('POST', '/discard', {});
 		current = null;
 		code.replaceChildren();
 		$('path').textContent = '';
 		await loadTree();
-		say('Tout est revenu à l\'origine.');
+		say(T.reset);
 	});
 
 	loadTree().then(() => { if (location.hash.length > 1) open(decodeURIComponent(location.hash.slice(1))); })

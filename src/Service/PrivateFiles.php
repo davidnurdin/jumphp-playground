@@ -40,16 +40,16 @@ final class PrivateFiles
     {
         $clean = GameFiles::clean($path);
         if ($clean === null || preg_match(GameFiles::NOT_LOADED, $clean)) {
-            throw new ProjectException("Chemin refusé : $path");
+            throw new ProjectException('Chemin refusé : %path%', ['%path%' => $path]);
         }
         $size = (int)filesize($source);
         if ($size > self::MAX_FILE) {
-            throw new ProjectException(sprintf('%s : %d Mo au plus par fichier.', $clean, self::MAX_FILE / 1048576));
+            throw new ProjectException('%path% : %max% Mo au plus par fichier.', ['%path%' => $clean, '%max%' => intdiv(self::MAX_FILE, 1048576)]);
         }
         $index = $this->index($project);
         $total = array_sum(array_column($index, 'size')) - ($index[$clean]['size'] ?? 0) + $size;
         if ($total > self::MAX_TOTAL || (!isset($index[$clean]) && count($index) >= self::MAX_COUNT)) {
-            throw new ProjectException(sprintf('Fichiers privés : %d Mo et %d fichiers au plus par jeu.', self::MAX_TOTAL / 1048576, self::MAX_COUNT));
+            throw new ProjectException('Fichiers privés : %size% Mo et %count% fichiers au plus par jeu.', ['%size%' => intdiv(self::MAX_TOTAL, 1048576), '%count%' => self::MAX_COUNT]);
         }
         (new Filesystem())->copy($source, $this->dir($project) . "/files/$clean", true);
         $index[$clean] = ['hash' => substr(hash_file('sha256', $source), 0, 16), 'size' => $size];

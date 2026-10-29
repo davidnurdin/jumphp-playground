@@ -44,11 +44,11 @@ final class Projects
             throw new ProjectException('Le titre doit faire 1 à 80 caractères.');
         }
         if ($problem = $this->slugs->problem($slug)) {
-            throw new ProjectException($problem);
+            throw $problem;
         }
         $token = $this->token($user);
         if ($this->github->repo($user->getLogin() . '/' . $slug, $token)) {
-            throw new ProjectException("Vous avez déjà un dépôt GitHub « $slug » : choisissez un autre nom, ou importez ce dépôt.");
+            throw new ProjectException('Vous avez déjà un dépôt GitHub « %slug% » : choisissez un autre nom, ou importez ce dépôt.', ['%slug%' => $slug]);
         }
         try {
             $repo = $this->github->createRepo($token, $slug, $description ?: $title, $this->pageUrl($slug));
@@ -74,14 +74,14 @@ final class Projects
             throw new ProjectException('Dépôt GitHub attendu : propriétaire/nom.');
         }
         if ($problem = $this->slugs->problem($slug)) {
-            throw new ProjectException($problem);
+            throw $problem;
         }
         $repo = $this->github->repo($repoFullName, $token);
         if (!$repo || !empty($repo['private'])) {
-            throw new ProjectException("Le dépôt $repoFullName est introuvable ou privé.");
+            throw new ProjectException('Le dépôt %repo% est introuvable ou privé.', ['%repo%' => $repoFullName]);
         }
         if ($token !== null && empty($repo['permissions']['push'])) {
-            throw new ProjectException("Vous n'avez pas les droits d'écriture sur $repoFullName : forkez-le d'abord sur GitHub.");
+            throw new ProjectException('Vous n\'avez pas les droits d\'écriture sur %repo% : forkez-le d\'abord sur GitHub.', ['%repo%' => $repoFullName]);
         }
         $project = new Project($user, $slug, $repo['name'], $category, $repo['full_name'], 'games/' . $slug);
         $project->setDescription((string)($repo['description'] ?? ''));
@@ -96,11 +96,11 @@ final class Projects
     public function fork(User $user, Project $source, string $slug): Project
     {
         if ($problem = $this->slugs->problem($slug)) {
-            throw new ProjectException($problem);
+            throw $problem;
         }
         $token = $this->token($user);
         if ($this->github->repo($user->getLogin() . '/' . $slug, $token)) {
-            throw new ProjectException("Vous avez déjà un dépôt GitHub « $slug ».");
+            throw new ProjectException('Vous avez déjà un dépôt GitHub « %slug% ».', ['%slug%' => $slug]);
         }
         try {
             $repo = $this->github->fork($token, $source->getRepoFullName(), $slug);
@@ -128,7 +128,7 @@ final class Projects
         }
         $token = $this->token($user);
         if (!$this->github->canPush($project->getRepoFullName(), $token)) {
-            throw new ProjectException("Vous ne pouvez pas écrire dans {$project->getRepoFullName()} : forkez le jeu pour garder vos modifications.");
+            throw new ProjectException('Vous ne pouvez pas écrire dans %repo% : forkez le jeu pour garder vos modifications.', ['%repo%' => $project->getRepoFullName()]);
         }
         $files = [];
         foreach ($drafts as $path => $draft) {

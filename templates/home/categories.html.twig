@@ -1,16 +1,16 @@
 {% extends 'base.html.twig' %}
-{% block title %}Annuaire des jeux par catégorie – JumPHP playground{% endblock %}
-{% block description %}Tous les jeux du JumPHP playground par catégorie : plates-formes, arcade, tir, réflexion, remakes rétro, 3D… Gratuits, dans le navigateur.{% endblock %}
+{% block title %}{{ 'Annuaire des jeux par catégorie – JumPHP playground'|trans }}{% endblock %}
+{% block description %}{{ 'Tous les jeux du JumPHP playground par catégorie : plates-formes, arcade, tir, réflexion, remakes rétro, 3D… Gratuits, dans le navigateur.'|trans }}{% endblock %}
 {% block body %}
 <section class="section">
 	<div class="wrap">
-		<h1>Catégories</h1>
+		<h1>{{ 'Catégories'|trans }}</h1>
 		<div class="cats">
 			{% for category in categories %}
 				<a href="{{ path('category', {slug: category.slug}) }}">
 					<em>{{ counts[category.id] ?? 0 }}</em>
-					<strong>{{ category.name }}</strong>
-					<span>{{ category.description }}</span>
+					<strong>{{ category.name|trans }}</strong>
+					<span>{{ category.description|trans }}</span>
 				</a>
 			{% endfor %}
 		</div>

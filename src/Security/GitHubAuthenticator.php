@@ -58,10 +58,10 @@ final class GitHubAuthenticator extends AbstractAuthenticator implements Authent
         $expected = $session->get(self::STATE_KEY);
         $session->remove(self::STATE_KEY);
         if (!$expected || !hash_equals($expected, (string)$request->query->get('state'))) {
-            throw new CustomUserMessageAuthenticationException('The GitHub sign-in expired, try again.');
+            throw new CustomUserMessageAuthenticationException('La connexion GitHub a expiré, réessayez.');
         }
         if ($request->query->has('error')) {
-            throw new CustomUserMessageAuthenticationException('GitHub sign-in cancelled.');
+            throw new CustomUserMessageAuthenticationException('Connexion GitHub annulée.');
         }
         try {
             $grant = $this->github->exchangeCode((string)$request->query->get('code'), $this->redirectUri());

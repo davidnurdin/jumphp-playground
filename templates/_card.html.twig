@@ -8,14 +8,14 @@
 		{% endif %}
 	</div>
 	<div class="body">
-		<span class="cat">{{ game.category.name }}</span>
+		<span class="cat">{{ game.category.name|trans }}</span>
 		<h3>{{ game.title }}</h3>
 		{% if game.description %}<p>{{ game.description }}</p>{% endif %}
 		<div class="meta">
 			{% if game.owner.avatarUrl %}<img src="{{ game.owner.avatarUrl }}&s=40" alt="" width="20" height="20" loading="lazy">{% endif %}
 			<span>{{ game.owner.login }}</span>
-			{% if game.rating %}<span class="stars-mini" title="{{ game.rating }} / 5 ({{ game.ratingCount }} vote{{ game.ratingCount > 1 ? 's' }})">★ {{ game.rating|number_format(1, ',') }}</span>{% endif %}
-			{% if game.plays %}<span class="faint">· {{ game.plays }} partie{{ game.plays > 1 ? 's' }}</span>{% endif %}
+			{% if game.rating %}<span class="stars-mini" title="{{ game.rating }} / 5 ({{ '%count% vote|%count% votes'|trans({'%count%': game.ratingCount}) }})">★ {{ game.rating|number_format(1, ',') }}</span>{% endif %}
+			{% if game.plays %}<span class="faint">· {{ '%count% partie|%count% parties'|trans({'%count%': game.plays}) }}</span>{% endif %}
 		</div>
 	</div>
 </a>

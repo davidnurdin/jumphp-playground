@@ -1,47 +1,47 @@
 {% extends 'base.html.twig' %}
-{% block title %}Nouveau jeu – studio JumPHP{% endblock %}
+{% block title %}{{ 'Nouveau jeu – studio JumPHP'|trans }}{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 <section class="section">
 	<div class="wrap two">
 		<form method="post" class="panel">
-			<h1>Nouveau jeu</h1>
+			<h1>{{ 'Nouveau jeu'|trans }}</h1>
 			<input type="hidden" name="_token" value="{{ csrf_token('studio-new') }}">
-			<div class="field"><label for="title">Titre</label><input id="title" name="title" value="{{ form.title }}" maxlength="80" required data-slug-source></div>
+			<div class="field"><label for="title">{{ 'Titre'|trans }}</label><input id="title" name="title" value="{{ form.title }}" maxlength="80" required data-slug-source></div>
 			<div class="field">
-				<label for="slug">Adresse</label><input id="slug" name="slug" value="{{ form.slug }}" maxlength="40" pattern="[a-z][a-z0-9-]{1,38}[a-z0-9]" data-slug-target>
-				<div class="hint">{{ app_url|trim('/', 'right') }}/<b>adresse</b> — c'est aussi le nom du dépôt GitHub créé dans votre compte.</div>
+				<label for="slug">{{ 'Adresse'|trans }}</label><input id="slug" name="slug" value="{{ form.slug }}" maxlength="40" pattern="[a-z][a-z0-9-]{1,38}[a-z0-9]" data-slug-target>
+				<div class="hint">{{ app_url|trim('/', 'right') }}/<b>{{ 'adresse'|trans }}</b> — {{ 'c\'est aussi le nom du dépôt GitHub créé dans votre compte.'|trans }}</div>
 			</div>
 			<div class="field">
-				<label for="kind">Type de jeu</label>
+				<label for="kind">{{ 'Type de jeu'|trans }}</label>
 				<select id="kind" name="kind" data-kind>
-					{% for key, label in kinds %}<option value="{{ key }}" {{ form.kind == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+					{% for key, label in kinds %}<option value="{{ key }}" {{ form.kind == key ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
 				</select>
-				<div class="hint" data-kind-hint="original" {{ form.kind != 'original' ? 'hidden' }}>Un jeu nouveau : décrivez-le, votre Claude l'écrit.</div>
-				<div class="hint" data-kind-hint="cpc" {{ form.kind != 'cpc' ? 'hidden' }}>Le jeu refait avec ses graphismes, sa musique et ses règles d'origine. Votre Claude utilisera <a href="https://github.com/davidnurdin/dsk2jumphp">dsk2jumphp</a> (émulateur CPC, extraction des sprites, des niveaux et du son) sur votre ordinateur : gardez la disquette <code>.dsk</code> du jeu à portée, il vous demandera son chemin. Elle n'est jamais publiée.</div>
-				<div class="hint" data-kind-hint="port" {{ form.kind != 'port' ? 'hidden' }}>Un jeu dont le code source existe (C, Pascal, BASIC, assembleur…) : indiquez où le trouver dans la description, votre Claude le traduit en PHP.</div>
+				<div class="hint" data-kind-hint="original" {{ form.kind != 'original' ? 'hidden' }}>{{ 'Un jeu nouveau : décrivez-le, votre Claude l\'écrit.'|trans }}</div>
+				<div class="hint" data-kind-hint="cpc" {{ form.kind != 'cpc' ? 'hidden' }}>{{ 'Le jeu refait avec ses graphismes, sa musique et ses règles d\'origine. Votre Claude utilisera <a href="https://github.com/davidnurdin/dsk2jumphp">dsk2jumphp</a> (émulateur CPC, extraction des sprites, des niveaux et du son) sur votre ordinateur : gardez la disquette <code>.dsk</code> du jeu à portée, il vous demandera son chemin. Elle n\'est jamais publiée.'|trans|raw }}</div>
+				<div class="hint" data-kind-hint="port" {{ form.kind != 'port' ? 'hidden' }}>{{ 'Un jeu dont le code source existe (C, Pascal, BASIC, assembleur…) : indiquez où le trouver dans la description, votre Claude le traduit en PHP.'|trans }}</div>
 			</div>
 			<div class="field">
-				<label for="category">Catégorie</label>
+				<label for="category">{{ 'Catégorie'|trans }}</label>
 				<select id="category" name="category" required>
 					<option value="">—</option>
-					{% for category in categories %}<option value="{{ category.slug }}" {{ form.category == category.slug ? 'selected' }}>{{ category.name }}</option>{% endfor %}
+					{% for category in categories %}<option value="{{ category.slug }}" {{ form.category == category.slug ? 'selected' }}>{{ category.name|trans }}</option>{% endfor %}
 				</select>
 			</div>
-			<div class="field"><label for="description">Description courte</label><input id="description" name="description" value="{{ form.description }}" maxlength="300"><div class="hint">Une ou deux phrases pour l'annuaire.</div></div>
+			<div class="field"><label for="description">{{ 'Description courte'|trans }}</label><input id="description" name="description" value="{{ form.description }}" maxlength="300"><div class="hint">{{ 'Une ou deux phrases pour l\'annuaire.'|trans }}</div></div>
 			<div class="field">
-				<label for="brief">Votre jeu, en détail</label>
-				<textarea id="brief" name="brief" rows="10" required data-placeholder-cpc="Le jeu Amstrad CPC « … » (éditeur, année), refait à l'identique : mêmes niveaux, sprites, musique et sons, extraits de sa disquette. La disquette : ~/jeux/xxx.dsk. Commandes au clavier, à la manette et au tactile." placeholder="Un jeu de plates-formes où un chat ninja doit récupérer des poissons sur les toits de Paris. Écran 320×180, pixel art, 5 niveaux, des pigeons ennemis, un boss…">{{ form.brief }}</textarea>
-				<div class="hint">C'est ce que lira votre Claude (dans BRIEF.md) : le genre, les règles, les niveaux, le style graphique, les commandes, la page d'accueil voulue…</div>
+				<label for="brief">{{ 'Votre jeu, en détail'|trans }}</label>
+				<textarea id="brief" name="brief" rows="10" required data-placeholder-cpc="{{ 'Le jeu Amstrad CPC « … » (éditeur, année), refait à l\'identique : mêmes niveaux, sprites, musique et sons, extraits de sa disquette. La disquette : ~/jeux/xxx.dsk. Commandes au clavier, à la manette et au tactile.'|trans }}" placeholder="{{ 'Un jeu de plates-formes où un chat ninja doit récupérer des poissons sur les toits de Paris. Écran 320×180, pixel art, 5 niveaux, des pigeons ennemis, un boss…'|trans }}">{{ form.brief }}</textarea>
+				<div class="hint">{{ 'C\'est ce que lira votre Claude (dans BRIEF.md) : le genre, les règles, les niveaux, le style graphique, les commandes, la page d\'accueil voulue…'|trans }}</div>
 			</div>
-			<button class="btn primary big" type="submit">Créer le jeu</button>
+			<button class="btn primary big" type="submit">{{ 'Créer le jeu'|trans }}</button>
 		</form>
 		<aside class="panel">
-			<h2>Ce qui va se passer</h2>
+			<h2>{{ 'Ce qui va se passer'|trans }}</h2>
 			<ol class="muted" style="padding-left: 20px; margin: 0">
-				<li>Un dépôt public est créé dans votre compte GitHub : un projet JumPHP avec un premier jeu (le squelette) et votre description.</li>
-				<li>Vous lancez votre Claude avec la commande donnée sur la page du projet : il écrit le jeu, le teste, fait sa page d'accueil et pousse.</li>
-				<li>Chaque push est publié ici. Quand le jeu est prêt, il apparaît dans l'annuaire.</li>
+				<li>{{ 'Un dépôt public est créé dans votre compte GitHub : un projet JumPHP avec un premier jeu (le squelette) et votre description.'|trans }}</li>
+				<li>{{ 'Vous lancez votre Claude avec la commande donnée sur la page du projet : il écrit le jeu, le teste, fait sa page d\'accueil et pousse.'|trans }}</li>
+				<li>{{ 'Chaque push est publié ici. Quand le jeu est prêt, il apparaît dans l\'annuaire.'|trans }}</li>
 			</ol>
 		</aside>
 	</div>

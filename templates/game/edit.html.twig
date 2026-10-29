@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {% set sandbox = sandbox ?? false %}
-{% block title %}{{ sandbox ? 'Bac à sable : ' : 'Éditer ' }}{{ project.title }} – JumPHP playground{% endblock %}
+{% block title %}{{ (sandbox ? 'Bac à sable : %title%' : 'Éditer %title%')|trans({'%title%': project.title}) }} – JumPHP playground{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 {% block javascripts %}{{ importmap(['app', 'editor']) }}{% endblock %}
 {% block body_class %}full{% endblock %}
@@ -8,11 +8,11 @@
 {% if sandbox %}
 <div class="gamebar sandbox-bar">
 	<div class="wrap">
-		<h1>Bac à sable</h1>
-		<span class="by">Changez le code de <b>{{ project.title }}</b>, cliquez sur « ▶ Tester » : le jeu tourne dans votre navigateur. Sans compte ; vos fichiers restent {{ constant('App\\Service\\Sandbox::PURGE_DAYS') }} jours dans ce navigateur.</span>
+		<h1>{{ 'Bac à sable'|trans }}</h1>
+		<span class="by">{{ 'Changez le code de <b>%title%</b>, cliquez sur « ▶ Tester » : le jeu tourne dans votre navigateur. Sans compte ; vos fichiers restent %days% jours dans ce navigateur.'|trans({'%title%': project.title|e, '%days%': constant('App\\Service\\Sandbox::PURGE_DAYS')})|raw }}</span>
 		<div class="actions">
-			<a class="btn small" href="{{ path('docs_page', {page: 'hello-world'}) }}">Le tutoriel</a>
-			<a class="btn small primary" href="{{ path('studio_new') }}">Créer mon jeu</a>
+			<a class="btn small" href="{{ path('docs_page', {page: 'hello-world'}) }}">{{ 'Le tutoriel'|trans }}</a>
+			<a class="btn small primary" href="{{ path('studio_new') }}">{{ 'Créer mon jeu'|trans }}</a>
 		</div>
 	</div>
 </div>
@@ -23,63 +23,63 @@
 	data-api="{{ sandbox ? api|replace({'/tree': ''}) : path('api_tree', {slug: project.slug})|replace({'/tree': ''}) }}"
 	data-csrf="{{ sandbox ? token : csrf_token('editor') }}"
 	data-can-push="{{ can_push ? '1' : '0' }}">
-	<aside class="ed-tree" id="tree" aria-label="Fichiers"><p class="faint" style="padding: 0 10px">Chargement…</p></aside>
+	<aside class="ed-tree" id="tree" aria-label="{{ 'Fichiers'|trans }}"><p class="faint" style="padding: 0 10px">{{ 'Chargement…'|trans }}</p></aside>
 	<section class="ed-main">
 		<div class="ed-head">
-			<span class="path" id="path">Choisissez un fichier</span>
+			<span class="path" id="path">{{ 'Choisissez un fichier'|trans }}</span>
 			<span class="ed-status" id="status"></span>
-			<button class="btn small" type="button" id="btn-new">+ Fichier</button>
-			<button class="btn small" type="button" id="btn-revert" disabled>Annuler mes modifs</button>
-			<button class="btn small" type="button" id="btn-delete" disabled>Supprimer</button>
-			<button class="btn small" type="button" id="btn-preview">▶ Tester</button>
+			<button class="btn small" type="button" id="btn-new">+ {{ 'Fichier'|trans }}</button>
+			<button class="btn small" type="button" id="btn-revert" disabled>{{ 'Annuler mes modifs'|trans }}</button>
+			<button class="btn small" type="button" id="btn-delete" disabled>{{ 'Supprimer'|trans }}</button>
+			<button class="btn small" type="button" id="btn-preview">▶ {{ 'Tester'|trans }}</button>
 			{% if sandbox %}
-				<button class="btn small" type="button" id="btn-reset">Tout recommencer</button>
+				<button class="btn small" type="button" id="btn-reset">{{ 'Tout recommencer'|trans }}</button>
 			{% elseif can_push %}
-				<button class="btn small primary" type="button" id="btn-push">Envoyer sur GitHub</button>
+				<button class="btn small primary" type="button" id="btn-push">{{ 'Envoyer sur GitHub'|trans }}</button>
 			{% else %}
-				<button class="btn small primary" type="button" id="btn-fork">Forker pour garder</button>
+				<button class="btn small primary" type="button" id="btn-fork">{{ 'Forker pour garder'|trans }}</button>
 			{% endif %}
 		</div>
 		<div class="ed-code" id="code"><div class="ed-empty">
 			<div>
-				<p>Vos modifications sont gardées pour vous seul (<span id="drafts">{{ drafts }}</span> fichier{{ drafts > 1 ? 's' }} modifié{{ drafts > 1 ? 's' }}).</p>
+				<p>{{ 'Vos modifications sont gardées pour vous seul (%count% %files%).'|trans({'%count%': '<span id="drafts">' ~ drafts ~ '</span>', '%files%': (drafts > 1 ? 'fichiers modifiés' : 'fichier modifié')|trans|e})|raw }}</p>
 				{% if sandbox %}
-					<p class="muted">Ouvrez <b>src/Scene/HelloScene.php</b> (à gauche), changez le texte « HELLO WORLD! » ou la couleur, puis « ▶ Tester ». Le menu est dans <b>TitleScene.php</b>, les touches dans <b>config/input.yaml</b>.</p>
+					<p class="muted">{{ 'Ouvrez <b>src/Scene/HelloScene.php</b> (à gauche), changez le texte « HELLO WORLD! » ou la couleur, puis « ▶ Tester ». Le menu est dans <b>TitleScene.php</b>, les touches dans <b>config/input.yaml</b>.'|trans|raw }}</p>
 				{% else %}
-					<p class="muted">« Tester » lance le jeu avec elles. {{ can_push ? '« Envoyer sur GitHub » en fait un commit : le jeu est republié.' : 'Ce jeu n\'est pas à vous : forkez-le pour les envoyer dans votre propre dépôt.' }}</p>
+					<p class="muted">{{ '« Tester » lance le jeu avec elles.'|trans }} {{ can_push ? '« Envoyer sur GitHub » en fait un commit : le jeu est republié.'|trans : 'Ce jeu n\'est pas à vous : forkez-le pour les envoyer dans votre propre dépôt.'|trans }}</p>
 				{% endif %}
 			</div>
 		</div></div>
 	</section>
-	<section class="ed-preview" aria-label="Aperçu">
-		<div class="ed-head"><span class="path">Aperçu avec vos modifications</span><button class="btn small" type="button" id="btn-reload">↻ Relancer</button></div>
-		<iframe id="preview" title="Aperçu du jeu" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+	<section class="ed-preview" aria-label="{{ 'Aperçu'|trans }}">
+		<div class="ed-head"><span class="path">{{ 'Aperçu avec vos modifications'|trans }}</span><button class="btn small" type="button" id="btn-reload">↻ {{ 'Relancer'|trans }}</button></div>
+		<iframe id="preview" title="{{ 'Aperçu du jeu'|trans }}" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
 	</section>
 </div>
 
 <dialog id="dlg-new">
 	<form method="dialog">
-		<h2>Nouveau fichier</h2>
-		<div class="field"><label for="new-path">Chemin dans le jeu</label><input id="new-path" placeholder="src/Entity/Enemy.php" required><div class="hint">Relatif à {{ project.gameDir }}/</div></div>
-		<div class="actions"><button class="btn primary" value="ok">Créer</button><button class="btn" value="cancel" formnovalidate>Annuler</button></div>
+		<h2>{{ 'Nouveau fichier'|trans }}</h2>
+		<div class="field"><label for="new-path">{{ 'Chemin dans le jeu'|trans }}</label><input id="new-path" placeholder="src/Entity/Enemy.php" required><div class="hint">{{ 'Relatif à %dir%/'|trans({'%dir%': project.gameDir}) }}</div></div>
+		<div class="actions"><button class="btn primary" value="ok">{{ 'Créer'|trans }}</button><button class="btn" value="cancel" formnovalidate>{{ 'Annuler'|trans }}</button></div>
 	</form>
 </dialog>
 <dialog id="dlg-push">
 	<form method="dialog">
-		<h2>Envoyer sur GitHub</h2>
-		<p class="muted">Un commit sur <code>{{ project.repoFullName }}</code> ({{ project.defaultBranch }}) avec vos fichiers modifiés ; le jeu est republié dans la minute.</p>
-		<div class="field"><label for="push-message">Message du commit</label><input id="push-message" value="Changes from the JumPHP playground editor" required></div>
-		<div class="actions"><button class="btn primary" value="ok">Envoyer</button><button class="btn" value="cancel" formnovalidate>Annuler</button></div>
+		<h2>{{ 'Envoyer sur GitHub'|trans }}</h2>
+		<p class="muted">{{ 'Un commit sur <code>%repo%</code> (%branch%) avec vos fichiers modifiés ; le jeu est republié dans la minute.'|trans({'%repo%': project.repoFullName|e, '%branch%': project.defaultBranch|e})|raw }}</p>
+		<div class="field"><label for="push-message">{{ 'Message du commit'|trans }}</label><input id="push-message" value="Changes from the JumPHP playground editor" required></div>
+		<div class="actions"><button class="btn primary" value="ok">{{ 'Envoyer'|trans }}</button><button class="btn" value="cancel" formnovalidate>{{ 'Annuler'|trans }}</button></div>
 	</form>
 </dialog>
 {% if not sandbox %}
 <dialog id="dlg-fork">
 	<form method="post" action="{{ path('game_fork', {slug: project.slug}) }}">
-		<h2>Forker {{ project.title }}</h2>
-		<p class="muted">Une copie du jeu dans votre compte GitHub, publiée ici sous ce nom ; vos modifications y sont transférées et vous pourrez les envoyer.</p>
+		<h2>{{ 'Forker %title%'|trans({'%title%': project.title}) }}</h2>
+		<p class="muted">{{ 'Une copie du jeu dans votre compte GitHub, publiée ici sous ce nom ; vos modifications y sont transférées et vous pourrez les envoyer.'|trans }}</p>
 		<input type="hidden" name="_token" value="{{ csrf_token('fork-' ~ project.id) }}">
-		<div class="field"><label for="fork-slug">Nom de votre version</label><input id="fork-slug" name="slug" value="{{ fork_slug }}" required></div>
-		<div class="actions"><button class="btn primary" type="submit">Forker</button><button class="btn" type="button" onclick="this.closest('dialog').close()">Annuler</button></div>
+		<div class="field"><label for="fork-slug">{{ 'Nom de votre version'|trans }}</label><input id="fork-slug" name="slug" value="{{ fork_slug }}" required></div>
+		<div class="actions"><button class="btn primary" type="submit">{{ 'Forker'|trans }}</button><button class="btn" type="button" onclick="this.closest('dialog').close()">{{ 'Annuler'|trans }}</button></div>
 	</form>
 </dialog>
 {% endif %}

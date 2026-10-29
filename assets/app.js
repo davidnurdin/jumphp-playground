@@ -1,13 +1,28 @@
 // The portal's script: copy buttons, the slug suggested from the title, the game frames.
 import './styles/app.css';
 
+// the few words written from here, in the page's language (<html lang>)
+const T = document.documentElement.lang === 'en' ? {
+	copied: 'Copied!', linkCopied: 'Link copied!', copyLink: 'Copy link',
+	thanks: (score) => `Thanks! Your rating: ${score} / 5`,
+	sending: (n, total, name) => `Uploading ${n} / ${total}: ${name}…`,
+	error: (status, name) => `Error ${status} on ${name}`,
+	sent: (n) => `${n} file(s) uploaded.`,
+} : {
+	copied: 'Copié !', linkCopied: 'Lien copié !', copyLink: 'Copier le lien',
+	thanks: (score) => `Merci ! Votre note : ${score} / 5`,
+	sending: (n, total, name) => `Envoi ${n} / ${total} : ${name}…`,
+	error: (status, name) => `Erreur ${status} sur ${name}`,
+	sent: (n) => `${n} fichier(s) envoyé(s).`,
+};
+
 document.addEventListener('click', (event) => {
 	const button = event.target.closest('[data-copy]');
 	if (!button) return;
 	const text = document.querySelector(button.dataset.copy)?.textContent || '';
 	navigator.clipboard?.writeText(text.trim()).then(() => {
 		const label = button.textContent;
-		button.textContent = 'Copié !';
+		button.textContent = T.copied;
 		setTimeout(() => { button.textContent = label; }, 1500);
 	});
 });
@@ -68,7 +83,7 @@ for (const box of document.querySelectorAll('[data-rate]')) {
 		const count = document.createElement('small');
 		count.textContent = `(${data.count})`;
 		avg.append(count);
-		box.title = 'Merci ! Votre note : ' + score + ' / 5';
+		box.title = T.thanks(score);
 	});
 }
 
@@ -88,8 +103,8 @@ for (const box of document.querySelectorAll('[data-share]')) {
 	});
 	box.querySelector('[data-share-copy]').addEventListener('click', async (event) => {
 		await navigator.clipboard?.writeText(box.dataset.url).catch(() => {});
-		event.target.textContent = 'Lien copié !';
-		setTimeout(() => { event.target.textContent = 'Copier le lien'; close(); }, 1200);
+		event.target.textContent = T.linkCopied;
+		setTimeout(() => { event.target.textContent = T.copyLink; close(); }, 1200);
 	});
 	menu.addEventListener('click', (event) => { if (event.target.closest('a')) close(); });
 	document.addEventListener('click', (event) => { if (!box.contains(event.target)) close(); });
@@ -135,20 +150,20 @@ if (privateForm) {
 		privateForm.querySelector('button[type=submit]').disabled = true;
 		let done = 0;
 		for (const file of files) {
-			status.textContent = `Envoi ${done + 1} / ${files.length} : ${file.name}…`;
+			status.textContent = T.sending(done + 1, files.length, file.name);
 			const body = new FormData();
 			body.append('_token', token);
 			body.append('path', (dir ? dir + '/' : '') + (file.webkitRelativePath || file.name));
 			body.append('file', file);
 			const response = await fetch(privateForm.dataset.private, { method: 'POST', body, credentials: 'same-origin' });
 			if (!response.ok) {
-				status.textContent = (await response.json().catch(() => ({}))).error || `Erreur ${response.status} sur ${file.name}`;
+				status.textContent = (await response.json().catch(() => ({}))).error || T.error(response.status, file.name);
 				privateForm.querySelector('button[type=submit]').disabled = false;
 				return;
 			}
 			done++;
 		}
-		status.textContent = `${done} fichier(s) envoyé(s).`;
+		status.textContent = T.sent(done);
 		privateForm.dataset.sent = '1';
 		privateForm.submit();
 	});
