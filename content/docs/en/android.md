@@ -3,7 +3,8 @@
 A game published here can already be installed on a phone (the **Install** button of its page). To have it
 **on the Play Store** too, JumPHP turns it into a real Android app: a *Trusted Web Activity*. It is the game's
 page in Chrome, full screen, with no address bar, with its icon and name; the game stays the site's (an update
-published here is in the app at once).
+published here is in the app at once). For an app that works without the network or a browser:
+[the native Android app](/docs/android-natif).
 
 You need: a JumPHP project on your computer ([on your computer](/docs/en-local)), Docker, and a
 [Google Play developer account](https://play.google.com/console) (25 $ once). Your Claude can do it all for

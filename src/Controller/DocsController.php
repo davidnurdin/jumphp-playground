@@ -27,6 +27,7 @@ final class DocsController extends AbstractController
             'portage' => 'Porter un jeu existant',
             'tests' => 'Tester son jeu (PHPUnit)',
             'android' => 'Sur Google Play (Android)',
+            'android-natif' => 'Une appli Android native',
             'executable' => 'Un exécutable (Linux, Windows)',
         ],
         'Tutoriels' => [
