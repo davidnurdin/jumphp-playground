@@ -52,7 +52,7 @@ Le bouton retour d'Android vaut Échap. Pour les voir sur votre ordinateur :
 ## Dans l'appli
 
 - PHP 8.5 compilé pour Android avec les extensions de JumPHP (SDL et ses modules image, son et police, OpenGL,
-  OpenAL, gd, mbstring…), SDL2 et OpenAL Soft : ce qui fait tourner le jeu sur un ordinateur.
+  OpenAL, gd, openssl, mbstring…), SDL2 et OpenAL Soft : ce qui fait tourner le jeu sur un ordinateur.
 - Votre jeu, déballé au premier lancement de chaque version (une ou deux secondes), dans le stockage privé de
   l'appli. Les sauvegardes et options y restent d'une mise à jour à l'autre.
 - Le nom, l'icône (celle de la PWA : `assets/icon.png`) et l'orientation (celle de la forme du jeu) viennent de
@@ -74,7 +74,7 @@ Le bouton retour d'Android vaut Échap. Pour les voir sur votre ordinateur :
 
 ## Bon à savoir
 
-- Pas encore de HTTPS dans l'appli : `$engine->http()` et le jeu en ligne ne marchent pas encore sur Android.
+- HTTPS marche (`$engine->http()`, le jeu en ligne en `wss://`) : les certificats viennent avec le jeu.
 - L'appli pèse 30 à 40 Mo (PHP et les bibliothèques pour deux processeurs).
 
 Les détails techniques : `docs/android-native.md` dans votre projet.

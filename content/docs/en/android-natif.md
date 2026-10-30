@@ -49,7 +49,7 @@ Android's back button is Escape. To see them on your computer: `JUMPHP_TOUCH_CON
 ## In the app
 
 - PHP 8.5 built for Android with JumPHP's extensions (SDL with its image, sound and font modules, OpenGL, OpenAL,
-  gd, mbstring…), SDL2 and OpenAL Soft: what runs the game on a computer.
+  gd, openssl, mbstring…), SDL2 and OpenAL Soft: what runs the game on a computer.
 - Your game, unpacked on the first launch of each version (a second or two), in the app's private storage. Saves
   and options stay there from one update to the next.
 - The name, the icon (the PWA's: `assets/icon.png`) and the orientation (the game's shape) come from `game.yaml`.
@@ -70,7 +70,7 @@ Android's back button is Escape. To see them on your computer: `JUMPHP_TOUCH_CON
 
 ## Good to know
 
-- No HTTPS in the app yet: `$engine->http()` and online play don't work on Android yet.
+- HTTPS works (`$engine->http()`, online play over `wss://`): the certificates come with the game.
 - The app weighs 30 to 40 MB (PHP and the libraries for two processors).
 
 The technical details: `docs/android-native.md` in your project.
