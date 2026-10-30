@@ -56,6 +56,7 @@ bin/jumphp run my-game                # the game in a window, with sound
 | `bin/jumphp build:remote my-game` | the game as this site loads it (shared engine, files one by one) |
 | `bin/jumphp deploy my-game` | on your own server |
 | `bin/jumphp twa my-game --url …` | an Android app for Google Play ([the guide](/docs/android)) |
+| `bin/jumphp export:standalone my-game` | the game as one executable file, for Linux and Windows ([the guide](/docs/executable)) |
 
 To publish it here: push your project to a public GitHub repository, then [import it](/docs/importer). Every
 push is then republished.

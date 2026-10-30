@@ -527,6 +527,7 @@ Jour: Day
 'Empreinte SHA-256 invalide (32 octets, AA:BB:…).': 'Invalid SHA-256 fingerprint (32 bytes, AA:BB:…).'
 'Il faut 1 à 4 empreintes SHA-256 (votre clé, et celle de Google Play).': '1 to 4 SHA-256 fingerprints are needed (your key, and Google Play''s).'
 'Sur Google Play (Android)': 'On Google Play (Android)'
+'Un exécutable (Linux, Windows)': 'An executable (Linux, Windows)'
 Console: Console
 Effacer: Clear
 'Ce que le PHP du jeu écrit (echo, var_dump, print_r, phpinfo(), les avertissements) s''affiche ici.': 'What the game''s PHP writes (echo, var_dump, print_r, phpinfo(), warnings) shows here.'

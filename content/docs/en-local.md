@@ -56,6 +56,7 @@ bin/jumphp run mon-jeu                # le jeu dans une fenêtre, avec le son
 | `bin/jumphp build:remote mon-jeu` | le jeu tel que ce site le charge (moteur partagé, fichiers un par un) |
 | `bin/jumphp deploy mon-jeu` | sur votre propre serveur |
 | `bin/jumphp twa mon-jeu --url …` | une appli Android pour Google Play ([le guide](/docs/android)) |
+| `bin/jumphp export:standalone mon-jeu` | le jeu en un seul fichier exécutable, pour Linux et Windows ([le guide](/docs/executable)) |
 
 Pour le publier ici : poussez votre projet dans un dépôt public GitHub, puis
 [importez-le](/docs/importer). Chaque push est ensuite republié.
