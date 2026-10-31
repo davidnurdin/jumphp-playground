@@ -534,3 +534,27 @@ Jour: Day
 Console: Console
 Effacer: Clear
 'Ce que le PHP du jeu écrit (echo, var_dump, print_r, phpinfo(), les avertissements) s''affiche ici.': 'What the game''s PHP writes (echo, var_dump, print_r, phpinfo(), warnings) shows here.'
+"Notes de %title% – studio JumPHP": "Notes of %title% – JumPHP studio"
+"La mémoire privée du projet : ce que votre Claude note pour savoir où en est le jeu (MCP : save_note, get_notes, add_todos, update_todos), et ce qu'il reste à faire. Vous seul la voyez ; elle n'est jamais publiée. Vous pouvez aussi la modifier : votre Claude lira vos changements à sa prochaine session.": "The project's private memory: what your Claude writes down to know where the game stands (MCP: save_note, get_notes, add_todos, update_todos), and what is left to do. Only you see it; it is never published. You can change it too: your Claude reads your changes at its next session."
+"Nouvelle note": "New note"
+Nom: Name
+"« progress » est la note que votre Claude lit en premier : où en est le jeu.": "\"progress\" is the note your Claude reads first: where the game stands."
+"Texte (Markdown)": "Text (Markdown)"
+"Modifiée le %date%": "Changed on %date%"
+Modifier: Edit
+"Supprimer cette note ?": "Delete this note?"
+"Pas encore de note. Votre Claude en écrit une (save_note) à la fin de chaque session ; vous pouvez aussi en créer une.": "No note yet. Your Claude writes one (save_note) at the end of each session; you can create one too."
+Tâches: Tasks
+"Marquer à faire": "Mark as to do"
+"Marquer faite": "Mark as done"
+"Ajouter (une tâche par ligne)": "Add (one task per line)"
+Ajouter: Add
+"Retirer les tâches faites": "Remove the done tasks"
+"Lire et modifier les notes": "Read and edit the notes"
+"Les notes et les tâches privées de votre Claude": "Your Claude's private notes and tasks"
+"Note supprimée.": "Note deleted."
+"Note enregistrée.": "Note saved."
+"Le nom d'une note : 1 à 60 lettres, chiffres, espaces, . / - _": "A note's name: 1 to 60 letters, digits, spaces, . / - _"
+"Une note fait 200 Ko au plus.": "A note holds 200 KB at most."
+"Une autre note porte déjà ce nom.": "Another note already has this name."
+"50 notes au plus par projet.": "50 notes at most per project."

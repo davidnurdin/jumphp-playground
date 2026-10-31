@@ -356,6 +356,25 @@ final class PlaygroundTest extends WebTestCase
         $this->get(self::APP, '/studio/projet/test-game');
         self::assertSelectorTextContains('.todo-list', 'pause menu');
         self::assertSelectorTextContains('details.note[open]', 'level 2 started');
+
+        // the notes page: Markdown, and the owner changes notes and tasks by hand (their Claude reads them back)
+        $this->get(self::APP, '/studio/projet/test-game/notes');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.note-body h1', 'State');
+        $token = $this->client->getCrawler()->filter('form.todo-add input[name=_token]')->attr('value');
+        $post = fn (string $path, array $data) => $this->client->request('POST', 'http://' . self::APP . "/studio/projet/test-game/notes/$path", $data + ['_token' => $token]);
+        $post('note', ['old' => 'ideas', 'name' => 'ideas', 'content' => 'two bosses']);
+        self::assertSame('two bosses', $tool('get_notes', ['slug' => 'test-game', 'name' => 'ideas'])['structuredContent']['content']);
+        $post('note', ['old' => '', 'name' => 'ideas', 'content' => 'x']);
+        self::assertSame('two bosses', $tool('get_notes', ['slug' => 'test-game', 'name' => 'ideas'])['structuredContent']['content']);
+        $post('note', ['old' => 'ideas', 'delete' => 1]);
+        self::assertSame(['progress'], array_column($tool('get_notes', ['slug' => 'test-game'])['structuredContent']['notes'], 'name'));
+        $post('taches', ['action' => 'add', 'text' => "title screen\nhigh scores"]);
+        $post('taches', ['action' => 'toggle', 'id' => $menu]);
+        $post('taches', ['action' => 'clear']);
+        self::assertSame(['title screen', 'high scores'], array_column($tool('list_todos', ['slug' => 'test-game', 'all' => true])['structuredContent']['todos'], 'text'));
+        $post('taches', ['action' => 'add', 'text' => 'x', '_token' => 'bad']);
+        self::assertResponseStatusCodeSame(403);
         $this->client->request('POST', 'http://' . self::APP . '/test-game/problemes', ['body' => 'crash'], [], ['HTTP_ORIGIN' => 'http://jumphp.test']);
         $issue = $tool('list_feedback', ['slug' => 'test-game'])['structuredContent']['issue'][0];
         self::assertSame(['crash', true], [$issue['text'], $issue['approved']]);

@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Notes de %title% – studio JumPHP'|trans({'%title%': project.title}) }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{# a game's private memory (NotesController): the notes and the todo list its owner's Claude keeps through the MCP; only the owner sees this page #}
+{% set token = csrf_token('studio-notes-' ~ project.id) %}
+<section class="section">
+	<div class="wrap">
+		<div class="section-head">
+			<h1>📝 {{ 'Notes'|trans }} · <a href="{{ path('game', {slug: project.slug}) }}">{{ project.title }}</a></h1>
+			<div class="actions">
+				{% if project.publishedSha %}<a class="btn" href="{{ path('game_edit', {slug: project.slug}) }}">{{ 'Éditeur'|trans }}</a>{% endif %}
+				<a class="btn" href="{{ path('studio_project', {slug: project.slug}) }}">{{ 'Réglages'|trans }}</a>
+				<a class="btn" href="{{ path('studio') }}">{{ 'Mes jeux'|trans }}</a>
+			</div>
+		</div>
+		<p class="muted">{{ 'La mémoire privée du projet : ce que votre Claude note pour savoir où en est le jeu (MCP : save_note, get_notes, add_todos, update_todos), et ce qu\'il reste à faire. Vous seul la voyez ; elle n\'est jamais publiée. Vous pouvez aussi la modifier : votre Claude lira vos changements à sa prochaine session.'|trans }}</p>
+
+		<div class="two notes-page" style="margin-top: 18px">
+			<div class="panel">
+				<nav class="note-tabs" aria-label="{{ 'Notes'|trans }}">
+					{% for note in notes %}
+						<a href="{{ path('studio_notes', {slug: project.slug, note: note.name}) }}" class="{{ not new and current and note.name == current.name ? 'active' }}"><code>{{ note.name }}</code> <span class="faint">{{ note.updatedAt|date('d/m H:i') }}</span></a>
+					{% endfor %}
+					<a href="{{ path('studio_notes', {slug: project.slug, nouvelle: 1}) }}" class="{{ new ? 'active' }}">+ {{ 'Nouvelle note'|trans }}</a>
+				</nav>
+				{% if edit %}
+					{% set editing = new ? null : current %}
+					<form method="post" action="{{ path('studio_notes_save', {slug: project.slug}) }}">
+						<input type="hidden" name="_token" value="{{ token }}">
+						<input type="hidden" name="old" value="{{ editing ? editing.name }}">
+						<div class="field"><label for="note-name">{{ 'Nom'|trans }}</label><input id="note-name" name="name" value="{{ editing ? editing.name : (notes ? '' : 'progress') }}" maxlength="60" pattern="[\w .\/\-]{1,60}" required placeholder="progress"><div class="hint">{{ '« progress » est la note que votre Claude lit en premier : où en est le jeu.'|trans }}</div></div>
+						<div class="field"><label for="note-content">{{ 'Texte (Markdown)'|trans }}</label><textarea id="note-content" name="content" rows="24" class="mono">{{ editing ? editing.content }}</textarea></div>
+						<div class="actions">
+							<button class="btn primary" type="submit">{{ 'Enregistrer'|trans }}</button>
+							<a class="btn" href="{{ path('studio_notes', {slug: project.slug, note: editing ? editing.name : null}) }}">{{ 'Annuler'|trans }}</a>
+						</div>
+					</form>
+				{% elseif current %}
+					<div class="note-head">
+						<span class="faint">{{ 'Modifiée le %date%'|trans({'%date%': current.updatedAt|date('d/m/Y H:i')}) }} · {{ (current.content|length / 1000)|round(1) }} Ko</span>
+						<div class="actions">
+							<a class="btn small" href="{{ path('studio_notes', {slug: project.slug, note: current.name, modifier: 1}) }}">✎ {{ 'Modifier'|trans }}</a>
+							<form method="post" action="{{ path('studio_notes_save', {slug: project.slug}) }}" onsubmit="return confirm({{ 'Supprimer cette note ?'|trans|json_encode }})">
+								<input type="hidden" name="_token" value="{{ token }}"><input type="hidden" name="old" value="{{ current.name }}">
+								<button class="btn small danger" type="submit" name="delete" value="1">{{ 'Supprimer'|trans }}</button>
+							</form>
+						</div>
+					</div>
+					<article class="doc note-body">{{ html|raw }}</article>
+				{% else %}
+					<p class="faint">{{ 'Pas encore de note. Votre Claude en écrit une (save_note) à la fin de chaque session ; vous pouvez aussi en créer une.'|trans }}</p>
+				{% endif %}
+			</div>
+
+			<div class="panel" id="taches">
+				<h2>{{ 'Tâches'|trans }}</h2>
+				{% set left = todos|filter(t => not t.done) %}
+				{% if todos %}
+					<p class="faint">{{ '%left% à faire, %done% faites'|trans({'%left%': left|length, '%done%': todos|length - left|length}) }}</p>
+					<ul class="todo-list editable">
+						{% for todo in todos %}
+							<li class="{{ todo.done ? 'done' }}">
+								<form method="post" action="{{ path('studio_notes_todos', {slug: project.slug}) }}">
+									<input type="hidden" name="_token" value="{{ token }}"><input type="hidden" name="id" value="{{ todo.id }}"><input type="hidden" name="note" value="{{ current and not new ? current.name }}">
+									<button class="todo-check" type="submit" name="action" value="toggle" title="{{ todo.done ? 'Marquer à faire'|trans : 'Marquer faite'|trans }}">{{ todo.done ? '☑' : '☐' }}</button>
+									<span class="todo-text">{{ todo.text }}</span>
+									<button class="todo-del" type="submit" name="action" value="delete" title="{{ 'Supprimer'|trans }}" aria-label="{{ 'Supprimer'|trans }}">×</button>
+								</form>
+							</li>
+						{% endfor %}
+					</ul>
+				{% else %}
+					<p class="faint">{{ 'Rien pour l\'instant.'|trans }}</p>
+				{% endif %}
+				<form method="post" action="{{ path('studio_notes_todos', {slug: project.slug}) }}" class="todo-add">
+					<input type="hidden" name="_token" value="{{ token }}"><input type="hidden" name="note" value="{{ current and not new ? current.name }}">
+					<label for="todo-text">{{ 'Ajouter (une tâche par ligne)'|trans }}</label>
+					<textarea id="todo-text" name="text" rows="3" required></textarea>
+					<div class="actions">
+						<button class="btn small primary" type="submit" name="action" value="add">+ {{ 'Ajouter'|trans }}</button>
+						{% if todos|length > left|length %}<button class="btn small" type="submit" name="action" value="clear" formnovalidate>{{ 'Retirer les tâches faites'|trans }}</button>{% endif %}
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</section>
+{% endblock %}

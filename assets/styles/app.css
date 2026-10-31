@@ -451,3 +451,20 @@ details.panel summary { cursor: pointer; }
 .ed-console-log pre.err { color: var(--red); }
 .ed-console-log .sep { font: 11px var(--mono); color: var(--faint); border-top: 1px dashed var(--line); margin: 6px 0 2px; padding-top: 2px; }
 .ed-console-log iframe { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; margin: 4px 0; }
+/* studio: a game's private notes and todo list (studio/notes.html.twig) */
+.notes-page > .panel + .panel { margin-top: 0; }
+.note-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.note-tabs a { padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 14px; color: var(--ink); }
+.note-tabs a.active { border-color: var(--cyan); background: var(--panel-2); }
+.note-head { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.note-body { max-width: none; font-size: 15px; }
+.note-body h1 { font-size: 24px; } .note-body h2 { font-size: 19px; margin-top: 24px; }
+textarea.mono { font: 13px/1.5 var(--mono); }
+.todo-list.editable { max-height: 60vh; }
+.todo-list.editable form { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+.todo-list.editable .todo-text { flex: 1; overflow-wrap: anywhere; }
+.todo-check, .todo-del { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; font-size: 16px; line-height: 1.3; }
+.todo-del { color: var(--faint); visibility: hidden; }
+.todo-list.editable li:hover .todo-del, .todo-del:focus { visibility: visible; }
+@media (hover: none) { .todo-del { visibility: visible; } }
+.todo-add { margin-top: 14px; } .todo-add textarea { min-height: 70px; margin-bottom: 8px; }

@@ -10,6 +10,7 @@
 			<div class="actions">
 				<a class="btn" href="{{ path('game', {slug: project.slug}) }}">{{ 'Page du jeu'|trans }}</a>
 				{% if project.publishedSha %}<a class="btn" href="{{ path('game_edit', {slug: project.slug}) }}">{{ 'Éditeur'|trans }}</a>{% endif %}
+				<a class="btn" href="{{ path('studio_notes', {slug: project.slug}) }}">📝 {{ 'Notes'|trans }}</a>
 				<a class="btn" href="{{ path('studio_stats', {slug: project.slug}) }}">📊 {{ 'Statistiques'|trans }}</a>
 				<a class="btn" href="{{ project.repoUrl }}">GitHub</a>
 				<form method="post" action="{{ path('studio_sync', {slug: project.slug}) }}"><input type="hidden" name="_token" value="{{ csrf_token('studio-project-' ~ project.id) }}"><button class="btn" type="submit" {{ project.status == 'creating' ? 'disabled' }}>↻ {{ 'Synchroniser'|trans }}</button></form>
@@ -87,13 +88,15 @@
 						</ul>
 						<p class="faint">{{ '%left% à faire, %done% faites'|trans({'%left%': left|length, '%done%': todos|length - left|length}) }}</p>
 					{% endif %}
+					{% set opened = (notes|filter(n => n.name == 'progress')|first) ?: (notes|first) %}
 					{% for note in notes %}
-						<details class="note"{{ note.name == 'progress' ? ' open' }}>
+						<details class="note"{{ opened and note.name == opened.name ? ' open' }}>
 							<summary><code>{{ note.name }}</code> <span class="faint">{{ note.updatedAt|date('d/m H:i') }}</span></summary>
 							<pre class="code">{{ note.content }}</pre>
 						</details>
 					{% endfor %}
 					{% if not todos and not notes %}<p class="faint">{{ 'Rien pour l\'instant.'|trans }}</p>{% endif %}
+					<p style="margin-top: 12px"><a class="btn small" href="{{ path('studio_notes', {slug: project.slug}) }}">📝 {{ 'Lire et modifier les notes'|trans }}</a></p>
 				</div>
 				<div class="panel">
 					<h2>{{ 'Publication'|trans }}</h2>
