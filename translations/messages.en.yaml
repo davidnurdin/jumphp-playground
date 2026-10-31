@@ -530,6 +530,7 @@ Jour: Day
 'Il faut 1 à 4 empreintes SHA-256 (votre clé, et celle de Google Play).': '1 to 4 SHA-256 fingerprints are needed (your key, and Google Play''s).'
 'Sur Google Play (Android)': 'On Google Play (Android)'
 'Une appli Android native': 'A native Android app'
+'Une appli Mac, iPhone et iPad': 'A Mac, iPhone and iPad app'
 'Un exécutable (Linux, Windows)': 'An executable (Linux, Windows)'
 Console: Console
 Effacer: Clear

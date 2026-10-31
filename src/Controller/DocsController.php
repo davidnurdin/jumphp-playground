@@ -28,6 +28,7 @@ final class DocsController extends AbstractController
             'tests' => 'Tester son jeu (PHPUnit)',
             'android' => 'Sur Google Play (Android)',
             'android-natif' => 'Une appli Android native',
+            'apple' => 'Une appli Mac, iPhone et iPad',
             'executable' => 'Un exécutable (Linux, Windows)',
         ],
         'Tutoriels' => [
