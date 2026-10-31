@@ -58,6 +58,27 @@ if (frame) {
 	frame.focus();
 }
 
+// the bar of a game's site folds under the arrow at the top of the screen (phones); the choice is remembered
+const barFold = document.querySelector('[data-bar-fold]');
+if (barFold) {
+	const fold = (folded) => {
+		document.body.classList.toggle('bar-folded', folded);
+		const label = folded ? barFold.dataset.unfold : barFold.dataset.fold;
+		barFold.setAttribute('aria-expanded', String(!folded));
+		barFold.setAttribute('aria-label', label);
+		barFold.title = label;
+		barFold.firstElementChild.textContent = folded ? '▼' : '▲';
+	};
+	let folded = false;
+	try { folded = localStorage.getItem('jumphp-bar-folded') === '1'; } catch { /* no storage: the bar opens */ }
+	fold(folded);
+	barFold.addEventListener('click', () => {
+		folded = !folded;
+		fold(folded);
+		try { localStorage.setItem('jumphp-bar-folded', folded ? '1' : '0'); } catch { /* not remembered */ }
+	});
+}
+
 // the kind of a new game (Studio): its explanation, and a remake goes in the "remakes" category
 const kind = document.querySelector('[data-kind]');
 if (kind) {

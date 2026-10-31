@@ -24,6 +24,8 @@
 	</div></section>
 {% elseif frame %}
 	{% include 'game/_bar.html.twig' with {mode: 'site'} %}
+	{# phones: fold the bar to give the site the whole screen (assets/app.js, remembered per viewer) #}
+	<button type="button" class="bar-fold" data-bar-fold data-fold="{{ 'Replier la barre'|trans }}" data-unfold="{{ 'Déplier la barre'|trans }}" aria-expanded="true" aria-label="{{ 'Replier la barre'|trans }}" title="{{ 'Replier la barre'|trans }}"><span aria-hidden="true">▲</span></button>
 	<iframe class="frame" src="{{ frame }}" title="{{ project.title }}" data-game-frame allow="fullscreen; gamepad; autoplay; clipboard-write; screen-wake-lock" allowfullscreen></iframe>
 {% else %}
 	{% include 'game/_bar.html.twig' with {mode: 'page'} %}
